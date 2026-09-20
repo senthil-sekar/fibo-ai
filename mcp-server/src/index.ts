@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 /**
- * MindVault MCP Server - Google Drive Integration
+ * Fibo MCP Server - Google Drive Integration
  * 
- * This MCP server provides tools to:
- * - List files from Google Drive
+ * Provides tools for AI agents to interact with Google Drive.
  * - Download and process PDFs, Docs, and other documents
  * - Extract text content for RAG indexing
  */
@@ -24,7 +23,11 @@ import pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 
 // Configuration
-const CONFIG_DIR = path.join(process.env.HOME || "~", ".mindvault");
+const FIBO_CONFIG_DIR = path.join(process.env.HOME || "~", ".fibo");
+const OLD_CONFIG_DIR = path.join(process.env.HOME || "~", ".mindvault");
+const CONFIG_DIR = fs.existsSync(FIBO_CONFIG_DIR) || !fs.existsSync(OLD_CONFIG_DIR)
+  ? FIBO_CONFIG_DIR
+  : OLD_CONFIG_DIR;
 const TOKEN_PATH = path.join(CONFIG_DIR, "drive_token.json");
 const CREDENTIALS_PATH = path.join(CONFIG_DIR, "drive_credentials.json");
 
@@ -106,7 +109,7 @@ async function extractGoogleDocText(drive: any, fileId: string): Promise<string>
 // Create MCP Server
 const server = new Server(
   {
-    name: "mindvault-drive",
+    name: "fibo-drive",
     version: "1.0.0",
   },
   {
@@ -200,7 +203,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "drive_sync_folder",
-        description: "Sync all documents from a folder to the MindVault RAG system",
+        description: "Sync all documents from a folder to the Fibo RAG system",
         inputSchema: {
           type: "object",
           properties: {
@@ -558,7 +561,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               text: JSON.stringify({
                 message: `Found ${processedFiles.length} documents to sync`,
                 files: processedFiles,
-                nextStep: "Use 'drive_download_and_process' for each file, then send to MindVault backend",
+                nextStep: "Use 'drive_download_and_process' for each file, then send to Fibo backend",
               }, null, 2),
             },
           ],
@@ -675,7 +678,7 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("MindVault Drive MCP Server running on stdio");
+  console.error("Fibo Drive MCP Server running on stdio");
 }
 
 main().catch(console.error);

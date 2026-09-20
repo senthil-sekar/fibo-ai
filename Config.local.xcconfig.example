@@ -2,6 +2,6 @@
 // minus the ".apps.googleusercontent.com" suffix.
 //
 // Create one at https://console.cloud.google.com/apis/credentials with application type "iOS"
-// and bundle ID com.mindvault.app. See docs/EMAIL_CONFIGURATION_GUIDE.md.
+// and bundle ID com.fibo.app. See docs/EMAIL_CONFIGURATION_GUIDE.md.
 
 GOOGLE_OAUTH_CLIENT_ID_PREFIX = 123456789012-abcdefghijklmnopqrstuvwxyz012345

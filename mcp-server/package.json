@@ -1,7 +1,7 @@
 {
-  "name": "mindvault-mcp-server",
+  "name": "fibo-mcp-server",
   "version": "1.0.0",
-  "description": "MCP Server for MindVault - Google Drive Integration",
+  "description": "MCP Server for Fibo - Google Drive Integration",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

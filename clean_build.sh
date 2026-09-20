@@ -4,7 +4,7 @@
 echo "Cleaning Xcode build cache..."
 
 # Remove DerivedData
-rm -rf ~/Library/Developer/Xcode/DerivedData/MindVault-*
+rm -rf ~/Library/Developer/Xcode/DerivedData/Fibo-*
 
 # Clean the project
 cd "$(dirname "$0")"

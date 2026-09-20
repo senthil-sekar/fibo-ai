@@ -31,7 +31,7 @@
 		D0F6DEFE2FDBC4A6008399F9 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = D0F6DEFD2FDBC4A6008399F9 /* MLXLLM */; };
 		D0F6DF002FDBC4A6008399F9 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = D0F6DEFF2FDBC4A6008399F9 /* MLXLMCommon */; };
 		D0F6DF022FDBC4A6008399F9 /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = D0F6DF012FDBC4A6008399F9 /* MLXVLM */; };
-		E01234562001 /* MindVaultApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560101 /* MindVaultApp.swift */; };
+		E01234562001 /* FiboApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560101 /* FiboApp.swift */; };
 		E01234562002 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560102 /* ContentView.swift */; };
 		E01234562003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E01234560103 /* Assets.xcassets */; };
 		E01234562004 /* JournalEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560104 /* JournalEntry.swift */; };
@@ -68,8 +68,8 @@
 		D0F142242F38415900D51670 /* EmailAccountConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAccountConnectionView.swift; sourceTree = "<group>"; };
 		D0F142252F38415900D51670 /* EmailDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailDetailView.swift; sourceTree = "<group>"; };
 		D0F142262F38415900D51670 /* EmailListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailListView.swift; sourceTree = "<group>"; };
-		E01234560001 /* MindVault.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MindVault.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		E01234560101 /* MindVaultApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MindVaultApp.swift; sourceTree = "<group>"; };
+		E01234560001 /* Fibo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Fibo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E01234560101 /* FiboApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiboApp.swift; sourceTree = "<group>"; };
 		E01234560102 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		E01234560103 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E01234560104 /* JournalEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JournalEntry.swift; sourceTree = "<group>"; };
@@ -134,19 +134,19 @@
 		E01234570001 = {
 			isa = PBXGroup;
 			children = (
-				E01234570002 /* MindVault */,
+				E01234570002 /* Fibo */,
 				D0F6DEF82FDBC4A6008399F9 /* Frameworks */,
 				E01234570003 /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		E01234570002 /* MindVault */ = {
+		E01234570002 /* Fibo */ = {
 			isa = PBXGroup;
 			children = (
 				D01AD506305F9FF200841D7A /* ModelCatalog.swift */,
 				D01AD504305F9D7700841D7A /* ModelBrowserView.swift */,
 				D01AD500305F9D0600841D7A /* TextChunker.swift */,
-				E01234560101 /* MindVaultApp.swift */,
+				E01234560101 /* FiboApp.swift */,
 				E01234560102 /* ContentView.swift */,
 				E01234570004 /* Models */,
 				E01234570005 /* Views */,
@@ -154,13 +154,13 @@
 				E01234570007 /* Utilities */,
 				E01234560103 /* Assets.xcassets */,
 			);
-			path = MindVault;
+			path = Fibo;
 			sourceTree = "<group>";
 		};
 		E01234570003 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E01234560001 /* MindVault.app */,
+				E01234560001 /* Fibo.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -246,9 +246,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		E01234580001 /* MindVault */ = {
+		E01234580001 /* Fibo */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = E01234590001 /* Build configuration list for PBXNativeTarget "MindVault" */;
+			buildConfigurationList = E01234590001 /* Build configuration list for PBXNativeTarget "Fibo" */;
 			buildPhases = (
 				E01234580002 /* Sources */,
 				E01234580003 /* Resources */,
@@ -264,13 +264,13 @@
 				D0297E882FD642AE0019EFF8 /* PBXTargetDependency */,
 				D0297E8A2FD642AE0019EFF8 /* PBXTargetDependency */,
 			);
-			name = MindVault;
+			name = Fibo;
 			packageProductDependencies = (
 				D01AD4FB305F927500841D7A /* Tokenizers */,
 				D01AD4FE305F929400841D7A /* HuggingFace */,
 			);
-			productName = MindVault;
-			productReference = E01234560001 /* MindVault.app */;
+			productName = Fibo;
+			productReference = E01234560001 /* Fibo.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -288,7 +288,7 @@
 					};
 				};
 			};
-			buildConfigurationList = E01234500002 /* Build configuration list for PBXProject "MindVault" */;
+			buildConfigurationList = E01234500002 /* Build configuration list for PBXProject "Fibo" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -307,7 +307,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				E01234580001 /* MindVault */,
+				E01234580001 /* Fibo */,
 			);
 		};
 /* End PBXProject section */
@@ -348,7 +348,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E01234562001 /* MindVaultApp.swift in Sources */,
+				E01234562001 /* FiboApp.swift in Sources */,
 				E01234562002 /* ContentView.swift in Sources */,
 				D030D84E2F46C2B600A9B610 /* DriveService.swift in Sources */,
 				D0F142282F38415900D51670 /* EmailDetailView.swift in Sources */,
@@ -483,8 +483,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Fibo;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MindVault needs access to your microphone for voice journal entries.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "MindVault needs access to speech recognition for voice journal entries.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fibo needs access to your microphone for voice journal entries.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fibo needs access to speech recognition for voice journal entries.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -521,8 +521,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Fibo;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MindVault needs access to your microphone for voice journal entries.";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "MindVault needs access to speech recognition for voice journal entries.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Fibo needs access to your microphone for voice journal entries.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Fibo needs access to speech recognition for voice journal entries.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -552,7 +552,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		E01234500002 /* Build configuration list for PBXProject "MindVault" */ = {
+		E01234500002 /* Build configuration list for PBXProject "Fibo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E01234590002 /* Debug */,
@@ -561,7 +561,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		E01234590001 /* Build configuration list for PBXNativeTarget "MindVault" */ = {
+		E01234590001 /* Build configuration list for PBXNativeTarget "Fibo" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				E01234590004 /* Debug */,
