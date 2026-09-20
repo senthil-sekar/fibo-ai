@@ -193,8 +193,6 @@ struct ProfileView: View {
     }
     
     private func deleteItem(_ item: ProfileItem) {
-        // Drop the embedding first, or the assistant keeps citing deleted items.
-        Task { await RAGService.shared.deleteProfileItem(item) }
         modelContext.delete(item)
     }
 }
@@ -361,26 +359,16 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query private var emailAccounts: [EmailAccount]
-    
-    @AppStorage("llmMode")       private var llmModeRaw   = LLMProviderMode.localLLM.rawValue
-    @AppStorage("openAIModel")   private var openAIModel  = "gpt-4o-mini"
-    @AppStorage("localModelPath") private var localModelPath = ""
-    @AppStorage("autoSync")      private var autoSync     = true
-
     @Query private var journalEntries: [JournalEntry]
     @Query private var allProfileItems: [ProfileItem]
 
+    @AppStorage("autoSync") private var autoSync = true
+
+    @StateObject private var models = ModelManager.shared
+    @State private var selectedModel: LLMModelOption = OnDeviceConfig.selectedLLMModel
     @State private var showEmailConnection = false
     @State private var showEmailList = false
-    @State private var openAIKeyEntry = ""
-    @State private var apiKeySaved = false
-    @State private var isSyncing = false
-    @State private var syncStatus: String?
-    @State private var showClearDataConfirm = false
-
-    private var llmMode: LLMProviderMode {
-        LLMProviderMode(rawValue: llmModeRaw) ?? .localLLM
-    }
+    @State private var showClearConfirm = false
     
     var body: some View {
         NavigationStack {
@@ -413,92 +401,45 @@ struct SettingsView: View {
                     }
                 }
                 
-                Section("AI Mode") {
-                    Picker("Mode", selection: $llmModeRaw) {
-                        ForEach(LLMProviderMode.allCases, id: \.rawValue) { mode in
-                            Text(mode.displayName).tag(mode.rawValue)
+                Section {
+                    Picker("Chat model", selection: $selectedModel) {
+                        ForEach(LLMModelOption.allCases) { option in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(option.displayName)
+                                Text("\(option.subtitle) · \(option.approxDownloadSize)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .tag(option)
                         }
                     }
-                    .pickerStyle(.menu)
+                    .onChange(of: selectedModel) { _, newValue in
+                        Task { await models.switchLLM(to: newValue) }
+                    }
 
-                    Label(llmMode.privacyLabel, systemImage: llmMode.privacyIcon)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-
-                    Text(llmMode.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    modelStatusRow
+                } header: {
+                    Text("On-Device AI Model")
+                } footer: {
+                    Text("Runs entirely on your iPhone. Switching models downloads the new weights once, then works fully offline.")
                 }
 
-                if llmMode == .openAI {
-                    Section("OpenAI API Key") {
-                        SecureField("sk-…", text: $openAIKeyEntry)
-                            .autocapitalization(.none)
-                        Picker("Model", selection: $openAIModel) {
-                            Text("GPT-4o Mini  (fast · low cost)").tag("gpt-4o-mini")
-                            Text("GPT-4o  (best quality)").tag("gpt-4o")
-                            Text("GPT-3.5 Turbo  (legacy)").tag("gpt-3.5-turbo")
-                        }
-                        Button(apiKeySaved ? "Key Saved ✓" : "Save Key") {
-                            saveOpenAIKey()
-                        }
-                        .disabled(openAIKeyEntry.isEmpty)
-                        if !openAIKeyEntry.isEmpty {
-                            Button("Remove Key", role: .destructive) {
-                                removeOpenAIKey()
-                            }
-                        }
-                    }
-                }
+                Section("AI Index") {
+                    Toggle("Auto-index new entries", isOn: $autoSync)
 
-                if llmMode == .localLLM {
-                    Section("Local Model (MLX)") {
-                        NavigationLink(destination: ModelBrowserView()) {
-                            HStack {
-                                Label("Browse Models", systemImage: "cpu.fill")
-                                Spacer()
-                                if localModelPath.isEmpty {
-                                    Text("None selected")
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(URL(fileURLWithPath: localModelPath).lastPathComponent)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(1)
-                                }
-                            }
-                        }
-                        Text("Download a model to your device and run it fully offline. Requires iPhone 15 Pro or newer (A17 Pro+) and the MLX-Swift package in Xcode.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                
-                Section("Sync Settings") {
-                    Toggle("Auto-sync new entries", isOn: $autoSync)
-
-                    Button {
-                        Task { await syncAllNow() }
-                    } label: {
-                        HStack {
-                            Text(isSyncing ? "Syncing…" : "Sync All Now")
-                            if isSyncing {
-                                Spacer()
-                                ProgressView()
-                            }
+                    Button("Index everything now") {
+                        Task {
+                            _ = await RAGService.shared.syncAllEntries(
+                                entries: journalEntries,
+                                items: allProfileItems
+                            )
                         }
                     }
-                    .disabled(isSyncing)
+                    .disabled(!models.isReady)
 
-                    if let syncStatus {
-                        Text(syncStatus)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                    Button("Clear AI Index", role: .destructive) {
+                        showClearConfirm = true
                     }
-
-                    Button("Clear AI Data", role: .destructive) {
-                        showClearDataConfirm = true
-                    }
-                    .disabled(isSyncing)
                 }
                 
                 Section("Data") {
@@ -538,41 +479,51 @@ struct SettingsView: View {
             .sheet(isPresented: $showEmailList) {
                 EmailListView()
             }
-            .onAppear {
-                openAIKeyEntry = (try? KeychainService.shared.retrieveAPIKey(for: "openai")) ?? ""
-                apiKeySaved = !openAIKeyEntry.isEmpty
-            }
-            .confirmationDialog(
-                "Clear all AI data?",
-                isPresented: $showClearDataConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Clear AI Data", role: .destructive) { clearAIData() }
+            .alert("Clear AI Index?", isPresented: $showClearConfirm) {
+                Button("Clear", role: .destructive) { clearIndex() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Removes every search index entry. Your journal entries and profile stay untouched — you can re-index anytime with Sync All Now.")
+                Text("This deletes all on-device embeddings. Your journal, profile, emails, and documents stay — you can re-index them anytime.")
             }
         }
     }
 
-    // MARK: - Sync / Index Helpers
+    // MARK: - Model status
 
-    private func syncAllNow() async {
-        isSyncing = true
-        syncStatus = nil
-        let result = await RAGService.shared.syncAllEntries(
-            entries: journalEntries,
-            items: allProfileItems
-        )
-        isSyncing = false
-        syncStatus = result.failed == 0
-            ? "Indexed \(result.success) item\(result.success == 1 ? "" : "s")."
-            : "Indexed \(result.success), failed \(result.failed)."
+    @ViewBuilder
+    private var modelStatusRow: some View {
+        switch models.phase {
+        case .ready:
+            Label("Ready · running on device", systemImage: "checkmark.circle.fill")
+                .foregroundStyle(.green)
+                .font(.caption)
+        case .downloading:
+            VStack(alignment: .leading, spacing: 4) {
+                Text(models.statusMessage.isEmpty ? "Downloading…" : models.statusMessage)
+                    .font(.caption)
+                ProgressView(value: models.downloadProgress)
+            }
+        case .loading:
+            Label("Loading into memory…", systemImage: "hourglass")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .idle:
+            Label("Not loaded yet", systemImage: "circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        case .failed(let message):
+            VStack(alignment: .leading, spacing: 6) {
+                Label(message, systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                    .font(.caption)
+                Button("Retry") { Task { await models.prepare() } }
+                    .font(.caption)
+            }
+        }
     }
 
-    private func clearAIData() {
-        LocalVectorStore.shared.deleteAll()
-        // Reset local flags so Sync All Now re-indexes everything.
+    private func clearIndex() {
+        RAGService.shared.clearIndex()
         for entry in journalEntries {
             entry.isEmbedded = false
             entry.embeddingId = nil
@@ -581,21 +532,6 @@ struct SettingsView: View {
             item.isEmbedded = false
             item.embeddingId = nil
         }
-        syncStatus = "AI index cleared."
-    }
-
-    // MARK: - Keychain Helpers
-
-    private func saveOpenAIKey() {
-        guard !openAIKeyEntry.isEmpty else { return }
-        try? KeychainService.shared.saveAPIKey(openAIKeyEntry, for: "openai")
-        apiKeySaved = true
-    }
-
-    private func removeOpenAIKey() {
-        try? KeychainService.shared.deleteAPIKey(for: "openai")
-        openAIKeyEntry = ""
-        apiKeySaved = false
     }
 }
 
@@ -668,11 +604,6 @@ struct EmailAccountRow: View {
 }
 
 #Preview {
-    // SettingsView @Query-s JournalEntry and EmailAccount too — opening Settings
-    // from the preview traps if the container doesn't know those types.
     ProfileView()
-        .modelContainer(
-            for: [ProfileItem.self, JournalEntry.self, EmailAccount.self],
-            inMemory: true
-        )
+        .modelContainer(for: [ProfileItem.self], inMemory: true)
 }

@@ -14,6 +14,7 @@ struct EmailListView: View {
     @Query private var accounts: [EmailAccount]
     
     @StateObject private var emailService = EmailService.placeholder
+    @StateObject private var processingService = EmailProcessingService.placeholder
     @State private var selectedMessage: EmailMessage?
     @State private var showAccountConnection = false
     @State private var selectedAccount: EmailAccount?
@@ -97,7 +98,8 @@ struct EmailListView: View {
                             } label: {
                                 Label("Process for AI", systemImage: "brain")
                             }
-
+                            .disabled(processingService.isProcessing)
+                            
                             Divider()
                             
                             // Disconnect account
@@ -121,6 +123,7 @@ struct EmailListView: View {
             .onAppear {
                 // Inject modelContext into services (available after view appears)
                 emailService.setModelContext(modelContext)
+                processingService.setModelContext(modelContext)
                 // Start auto-sync when view appears
                 if let account = accounts.first, account.isConnected {
                     emailService.startAutoSync(for: account)
@@ -132,6 +135,10 @@ struct EmailListView: View {
             .overlay {
                 if emailService.isSyncing {
                     syncProgressView
+                }
+                
+                if processingService.isProcessing {
+                    processingProgressView
                 }
             }
             .alert("Processing Complete", isPresented: $showProcessingAlert) {
@@ -296,6 +303,30 @@ struct EmailListView: View {
         }
     }
     
+    private var processingProgressView: some View {
+        ZStack {
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 16) {
+                ProgressView(value: processingService.processingProgress)
+                    .progressViewStyle(.linear)
+                    .frame(width: 200)
+                
+                Text("Processing for AI...")
+                    .font(.headline)
+                
+                Text("\(Int(processingService.processingProgress * 100))%")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(32)
+            .background(Color(uiColor: .systemBackground))
+            .cornerRadius(16)
+            .shadow(radius: 20)
+        }
+    }
+    
     private func syncEmails(for account: EmailAccount) {
         Task {
             do {
@@ -349,16 +380,11 @@ struct EmailListView: View {
             for index in offsets {
                 let email = messages[index]
                 
-                // Delete from vector DB if processed
+                // Remove from the on-device index if processed
                 if email.isProcessedForAI {
-                    do {
-                        try await VectorDBService.shared.delete(id: email.id.uuidString)
-                        print("✅ Deleted from vector DB: \(email.subject)")
-                    } catch {
-                        print("⚠️ Failed to delete from vector DB: \(error.localizedDescription)")
-                    }
+                    RAGService.shared.removeSource(email.id.uuidString)
                 }
-                
+
                 // Delete from local DB
                 modelContext.delete(email)
             }
@@ -384,7 +410,7 @@ struct EmailListView: View {
             let accountEmails = messages.filter { $0.account?.id == account.id }
             for email in accountEmails {
                 if email.isProcessedForAI {
-                    try? await VectorDBService.shared.delete(id: email.id.uuidString)
+                    RAGService.shared.removeSource(email.id.uuidString)
                 }
                 modelContext.delete(email)
             }

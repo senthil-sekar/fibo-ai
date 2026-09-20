@@ -2,199 +2,311 @@
 //  RAGService.swift
 //  MindVault
 //
-//  Retrieval-Augmented Generation service.
-//  Retrieval (embedding + vector search) always runs on-device — MindVault has
-//  no backend to call. Generation is the only thing that varies by AI Mode:
-//  MLX on-device, or OpenAI via BYOK, chosen through LLMService.activeProvider.
+//  On-device Retrieval-Augmented Generation. Orchestrates the local
+//  EmbeddingEngine + VectorStore (retrieval) and LLMEngine (generation).
+//  No backend, no network at inference time.
+//
 
 import Foundation
 import SwiftData
 
 @MainActor
-class RAGService: ObservableObject {
+final class RAGService: ObservableObject {
     static let shared = RAGService()
 
     @Published var isProcessing = false
     @Published var processingStatus: String = ""
     @Published var lastError: String?
 
+    private let models = ModelManager.shared
+    private var vectorStore: VectorStore?
+
     private init() {}
 
-    // MARK: - Embed Journal Entry
+    /// Streaming events emitted while answering a query.
+    enum RAGEvent {
+        case sources([ChatContext])
+        case token(String)
+    }
+
+    enum RAGError: LocalizedError {
+        case notConfigured
+        case modelsNotReady
+        var errorDescription: String? {
+            switch self {
+            case .notConfigured: return "The on-device store isn't ready yet."
+            case .modelsNotReady: return "The AI models are still loading. Please wait a moment."
+            }
+        }
+    }
+
+    // MARK: - Wiring
+
+    /// Must be called once at app start with the SwiftData context, so the
+    /// VectorStore can read/write IndexedChunk rows.
+    func configure(modelContext: ModelContext) {
+        if vectorStore == nil {
+            vectorStore = VectorStore(modelContext: modelContext, embedder: models.embedder)
+        }
+    }
+
+    // MARK: - Indexing
+
     func embedJournalEntry(_ entry: JournalEntry) async {
+        guard let vectorStore else { return }
         isProcessing = true
-        processingStatus = "Processing journal entry..."
-
+        processingStatus = "Indexing entry…"
         do {
-            let vector = try EmbeddingService.embedLocally(entry.fullText)
-            LocalVectorStore.shared.upsert(LocalVectorStore.VectorDocument(
-                id: entry.id.uuidString,
-                type: "journal_entry",
-                title: entry.title,
-                content: entry.fullText,
-                vector: vector,
-                indexedAt: Date()
-            ))
-
+            try await vectorStore.index(
+                sourceId: entry.id.uuidString,
+                type: "journal",
+                title: entry.title.isEmpty ? "Journal Entry" : entry.title,
+                fullText: entry.fullText,
+                subtitle: entry.category,
+                sourceDate: entry.createdAt
+            )
             entry.isEmbedded = true
             entry.embeddingId = entry.id.uuidString
-            processingStatus = "Entry synced to AI"
+            processingStatus = "Indexed"
             lastError = nil
         } catch {
+            entry.isEmbedded = false
             lastError = error.localizedDescription
-            processingStatus = "Failed to sync entry"
+            processingStatus = "Indexing failed"
         }
-
         isProcessing = false
     }
 
-    // MARK: - Embed Profile Item
     func embedProfileItem(_ item: ProfileItem) async {
+        guard let vectorStore else { return }
         isProcessing = true
-        processingStatus = "Processing profile item..."
-
+        processingStatus = "Indexing profile item…"
         do {
-            let vector = try EmbeddingService.embedLocally(item.fullText)
-            LocalVectorStore.shared.upsert(LocalVectorStore.VectorDocument(
-                id: item.id.uuidString,
-                type: item.type,
-                title: item.title,
-                content: item.fullText,
-                vector: vector,
-                indexedAt: Date()
-            ))
-
+            try await vectorStore.index(
+                sourceId: item.id.uuidString,
+                type: "profile",
+                title: item.title.isEmpty ? item.type : item.title,
+                fullText: item.fullText,
+                subtitle: item.subtitle ?? item.type,
+                sourceDate: item.startDate
+            )
             item.isEmbedded = true
             item.embeddingId = item.id.uuidString
-            processingStatus = "Profile item synced to AI"
+            processingStatus = "Indexed"
             lastError = nil
         } catch {
+            item.isEmbedded = false
             lastError = error.localizedDescription
-            processingStatus = "Failed to sync profile item"
+            processingStatus = "Indexing failed"
         }
-
         isProcessing = false
     }
 
-    // MARK: - Generate Response with RAG
-    func generateResponse(to query: String) async -> (String, [ChatContext]) {
-        isProcessing = true
-        processingStatus = "Embedding query on-device..."
-
-        do {
-            let queryVector = try EmbeddingService.embedLocally(query)
-
-            processingStatus = "Searching your journal..."
-            let matches = LocalVectorStore.shared.search(
-                queryVector: queryVector,
-                topK: Configuration.RAG.topK
-            )
-
-            let contexts = matches.map { match in
-                ChatContext(
-                    documentId: match.id,
-                    documentType: match.type,
-                    title: match.title,
-                    snippet: String(match.content.prefix(300)),
-                    relevanceScore: match.score,
-                    date: nil
-                )
-            }
-
-            processingStatus = "Generating response..."
-            let contextTexts = matches.map { $0.content }
-            let answer = try await LLMService.activeProvider.complete(
-                systemPrompt: Configuration.LLM.systemPrompt,
-                userMessage: buildRAGMessage(contexts: contextTexts, query: query),
-                history: []
-            )
-            lastError = nil
-            isProcessing = false
-            return (answer, contexts)
-        } catch {
-            lastError = error.localizedDescription
-            isProcessing = false
-            return ("I'm having trouble generating a response. Please check your settings and try again.", [])
-        }
-    }
-
-    private func buildRAGMessage(contexts: [String], query: String) -> String {
-        var msg = "Here is relevant information from the user's personal journal and profile:\n\n"
-        for (i, ctx) in contexts.enumerated() {
-            msg += "--- Context \(i + 1) ---\n\(ctx)\n\n"
-        }
-        msg += "---\n\nUser Question: \(query)"
-        return msg
-    }
-
-    // MARK: - Batch Sync
-    func syncAllEntries(entries: [JournalEntry], items: [ProfileItem]) async -> (success: Int, failed: Int) {
-        isProcessing = true
-        var successCount = 0
-        var failedCount = 0
-
-        let unsyncedEntries = entries.filter { !$0.isEmbedded }
-        let unsyncedItems   = items.filter   { !$0.isEmbedded }
-        let total = unsyncedEntries.count + unsyncedItems.count
-        var current = 0
-
-        for entry in unsyncedEntries {
-            current += 1
-            processingStatus = "Syncing \(current)/\(total)…"
-            await embedJournalEntry(entry)
-            entry.isEmbedded ? (successCount += 1) : (failedCount += 1)
-        }
-
-        for item in unsyncedItems {
-            current += 1
-            processingStatus = "Syncing \(current)/\(total)…"
-            await embedProfileItem(item)
-            item.isEmbedded ? (successCount += 1) : (failedCount += 1)
-        }
-
-        processingStatus = "Sync complete"
-        isProcessing = false
-        return (successCount, failedCount)
-    }
-
-    // MARK: - Delete from Vector Store
     func deleteEntry(_ entry: JournalEntry) async {
-        guard let embeddingId = entry.embeddingId else { return }
-        LocalVectorStore.shared.delete(id: embeddingId)
+        vectorStore?.deleteSource(entry.id.uuidString)
     }
 
     func deleteProfileItem(_ item: ProfileItem) async {
-        guard let embeddingId = item.embeddingId else { return }
-        LocalVectorStore.shared.delete(id: embeddingId)
+        vectorStore?.deleteSource(item.id.uuidString)
     }
 
-    // MARK: - Insights Generation
-    func generateInsights(from entries: [JournalEntry]) async -> String? {
-        guard !entries.isEmpty else { return nil }
+    /// Generic indexing entry point used by Email/Drive ingestion.
+    /// Returns the number of chunks stored.
+    @discardableResult
+    func index(
+        sourceId: String,
+        type: String,
+        title: String,
+        fullText: String,
+        subtitle: String = "",
+        sourceDate: Date? = nil
+    ) async throws -> Int {
+        guard let vectorStore else { throw RAGError.notConfigured }
+        return try await vectorStore.index(
+            sourceId: sourceId,
+            type: type,
+            title: title,
+            fullText: fullText,
+            subtitle: subtitle,
+            sourceDate: sourceDate
+        )
+    }
 
-        isProcessing = true
-        processingStatus = "Analyzing your journal..."
+    /// Remove all chunks for a source (journal/profile/email/document).
+    func removeSource(_ sourceId: String) {
+        vectorStore?.deleteSource(sourceId)
+    }
 
-        let recentEntries = entries.prefix(20).map { $0.fullText }.joined(separator: "\n\n---\n\n")
-        let prompt = """
-        Based on these recent journal entries, provide 3-5 key insights about patterns, growth, or themes you notice. Be specific and actionable.
+    /// Wipe the entire on-device index (used by "Clear AI Data").
+    func clearIndex() {
+        try? vectorStore?.deleteAll()
+    }
 
-        Journal Entries:
-        \(recentEntries)
-        """
+    /// Whether indexing/search can run right now.
+    var isReady: Bool { vectorStore != nil && models.isReady }
 
+    // MARK: - Retrieval + Generation (streaming)
+
+    /// Stream an answer: first a `.sources` event with the retrieved citations,
+    /// then `.token` events as the model generates.
+    func streamResponse(
+        to query: String,
+        history: [(role: String, content: String)] = []
+    ) -> AsyncThrowingStream<RAGEvent, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                guard let vectorStore else {
+                    continuation.finish(throwing: RAGError.notConfigured); return
+                }
+                guard models.isReady else {
+                    continuation.finish(throwing: RAGError.modelsNotReady); return
+                }
+                do {
+                    let hits = try await vectorStore.search(query)
+                    let contexts = hits.map { hit in
+                        ChatContext(
+                            documentId: hit.sourceId,
+                            documentType: hit.type,
+                            title: hit.title,
+                            snippet: hit.text.count > 300
+                                ? String(hit.text.prefix(300)) + "…"
+                                : hit.text,
+                            relevanceScore: hit.score,
+                            date: hit.sourceDate
+                        )
+                    }
+                    continuation.yield(.sources(contexts))
+
+                    guard !hits.isEmpty else {
+                        continuation.yield(.token(
+                            "I couldn't find anything relevant in your journal, profile, "
+                            + "emails, or documents. Try rephrasing, or add more entries first."
+                        ))
+                        continuation.finish(); return
+                    }
+
+                    let contextBlock = Self.buildContextBlock(hits)
+                    let userMessage = "CONTEXT:\n\(contextBlock)\n\nQUESTION: \(query)"
+
+                    let stream = await models.llm.generate(
+                        system: OnDeviceConfig.systemPrompt,
+                        user: userMessage,
+                        history: history
+                    )
+                    for try await delta in stream {
+                        continuation.yield(.token(delta))
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Non-streaming convenience kept for existing callers: collects the full
+    /// streamed answer and its sources.
+    func generateResponse(to query: String) async -> (String, [ChatContext]) {
+        var text = ""
+        var contexts: [ChatContext] = []
         do {
-            let response = try await LLMService.activeProvider.complete(
-                systemPrompt: Configuration.LLM.systemPrompt,
-                userMessage: prompt,
-                history: []
-            )
-            isProcessing = false
-            return response
+            for try await event in streamResponse(to: query) {
+                switch event {
+                case .sources(let c): contexts = c
+                case .token(let t): text += t
+                }
+            }
         } catch {
             lastError = error.localizedDescription
-            isProcessing = false
+            text = "Sorry — \(error.localizedDescription)"
+        }
+        return (text, contexts)
+    }
+
+    // MARK: - Batch (re)index
+
+    /// Index any journal entries / profile items not yet embedded. Called when
+    /// models become ready, or from a manual "rebuild index" action.
+    @discardableResult
+    func syncAllEntries(
+        entries: [JournalEntry],
+        items: [ProfileItem]
+    ) async -> (success: Int, failed: Int) {
+        isProcessing = true
+        var success = 0, failed = 0
+        let total = entries.filter { !$0.isEmbedded }.count
+            + items.filter { !$0.isEmbedded }.count
+        var index = 0
+
+        for entry in entries where !entry.isEmbedded {
+            index += 1
+            processingStatus = "Indexing \(index)/\(total)…"
+            await embedJournalEntry(entry)
+            entry.isEmbedded ? (success += 1) : (failed += 1)
+        }
+        for item in items where !item.isEmbedded {
+            index += 1
+            processingStatus = "Indexing \(index)/\(total)…"
+            await embedProfileItem(item)
+            item.isEmbedded ? (success += 1) : (failed += 1)
+        }
+
+        processingStatus = "Index up to date"
+        isProcessing = false
+        return (success, failed)
+    }
+
+    // MARK: - Insights
+
+    func generateInsights(from entries: [JournalEntry]) async -> String? {
+        guard !entries.isEmpty, models.isReady else { return nil }
+        isProcessing = true
+        processingStatus = "Analyzing your journal…"
+        defer { isProcessing = false }
+
+        let recent = entries.prefix(20).map { $0.fullText }.joined(separator: "\n\n---\n\n")
+        let prompt = """
+        Based on these recent journal entries, share 3–5 specific, actionable \
+        insights about patterns, growth, or recurring themes.
+
+        Entries:
+        \(recent)
+        """
+        do {
+            return try await models.llm.generateComplete(
+                system: OnDeviceConfig.systemPrompt,
+                user: prompt,
+                history: []
+            )
+        } catch {
+            lastError = error.localizedDescription
             return nil
         }
+    }
+
+    // MARK: - Prompt building
+
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        return f
+    }()
+
+    private static func buildContextBlock(_ hits: [RetrievedChunk]) -> String {
+        hits.prefix(OnDeviceConfig.maxContextChunks).enumerated().map { index, hit in
+            let label: String
+            switch hit.type {
+            case "email":
+                label = "Email — \"\(hit.title)\""
+                    + (hit.subtitle.isEmpty ? "" : " from \(hit.subtitle)")
+            case "journal":   label = "Journal — \"\(hit.title)\""
+            case "profile":   label = "Profile — \(hit.title)"
+            case "document":  label = "Document — \(hit.title)"
+            default:          label = hit.title
+            }
+            let dateStr = hit.sourceDate.map { " [\(dateFormatter.string(from: $0))]" } ?? ""
+            return "[\(index + 1)] \(label)\(dateStr)\n\(hit.text)"
+        }
+        .joined(separator: "\n\n")
     }
 }

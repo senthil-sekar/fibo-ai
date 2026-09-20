@@ -18,6 +18,12 @@ struct ContentView: View {
                 OnboardingView()
             }
         }
+        .task {
+            // Wire the on-device store to SwiftData, then download/load the
+            // local models (no-op once ready). Indexing & chat wait on this.
+            RAGService.shared.configure(modelContext: modelContext)
+            await ModelManager.shared.prepare()
+        }
     }
 }
 

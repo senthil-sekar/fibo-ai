@@ -26,9 +26,9 @@ class DriveService: NSObject, ObservableObject {
     private var accessToken: String?
     private var refreshToken: String?
     
-    // OAuth Configuration - see Config.local.xcconfig.example
-    private let clientId = Configuration.GoogleOAuth.clientID
-    private let redirectUri = Configuration.GoogleOAuth.driveRedirectURI
+    // OAuth Configuration - You need to set these from Google Cloud Console
+    private let clientId = "139218014357-3viojsk9bvbrqo96lbesscifdjitdlf.apps.googleusercontent.com" // iOS Client ID
+    private let redirectUri = "com.googleusercontent.apps.139218014357-3viojsk9bvbrqo96lbesscifdjitdlf:/oauth2redirect"
     private let scope = "https://www.googleapis.com/auth/drive.readonly"
     
     private let tokenKey = "google_drive_token"
@@ -96,7 +96,7 @@ class DriveService: NSObject, ObservableObject {
         
         // Present authentication session
         // The callback URL scheme should be the reversed client ID
-        let callbackURLScheme = Configuration.GoogleOAuth.reversedClientID
+        let callbackURLScheme = "com.googleusercontent.apps.139218014357-3viojsk9bvbrqo96lbesscifdjitdlf"
         
         let code = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
             let session = ASWebAuthenticationSession(
@@ -154,7 +154,12 @@ class DriveService: NSObject, ObservableObject {
             .data(using: .utf8)
         
         let (data, response) = try await URLSession.shared.data(for: request)
-
+        
+        // Debug response
+        if let jsonString = String(data: data, encoding: .utf8) {
+            print("🔐 Token response: \(jsonString)")
+        }
+        
         guard let httpResponse = response as? HTTPURLResponse else {
             throw DriveError.authenticationFailed("Invalid response")
         }
@@ -262,8 +267,15 @@ class DriveService: NSObject, ObservableObject {
         
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
-
+            
+            // Debug: Print the response
+            if let jsonString = String(data: data, encoding: .utf8) {
+                print("📁 Drive API Response: \(jsonString.prefix(500))")
+            }
+            
             if let httpResponse = response as? HTTPURLResponse {
+                print("📁 Drive API Status: \(httpResponse.statusCode)")
+                
                 if httpResponse.statusCode == 401 {
                     // Token expired, try refresh
                     try await refreshAccessToken()
@@ -363,97 +375,63 @@ class DriveService: NSObject, ObservableObject {
     
     func processDocumentForRAG(fileId: String, filename: String, mimeType: String) async throws -> Int {
         syncStatus = "Downloading \(filename)..."
-        
-        // Download the file
+
+        // Download the file (Google-native types are exported to PDF/CSV in downloadFile).
         let data = try await downloadFile(fileId: fileId)
-        
+
         syncStatus = "Processing \(filename)..."
-        
-        // Determine actual mime type for Google Docs (they get exported as PDF)
-        let actualMimeType: String
-        if mimeType.starts(with: "application/vnd.google-apps.document") {
-            actualMimeType = "application/pdf"
+
+        // Map Google-native mime types to the exported format we requested.
+        let effectiveMimeType: String
+        if mimeType.starts(with: "application/vnd.google-apps.document")
+            || mimeType.starts(with: "application/vnd.google-apps.presentation") {
+            effectiveMimeType = "application/pdf"
+        } else if mimeType.starts(with: "application/vnd.google-apps.spreadsheet") {
+            effectiveMimeType = "text/csv"
         } else {
-            actualMimeType = mimeType
+            effectiveMimeType = mimeType
         }
-        
-        // Extract text on-device and index into the local vector store.
-        let text = try extractTextOnDevice(from: data, mimeType: actualMimeType, filename: filename)
-        let chunks = Self.chunk(text)
-        guard !chunks.isEmpty else {
-            throw DriveError.processingFailed("No readable text found in \(filename).")
+
+        // Extract plain text on-device, then embed + store locally.
+        let text = Self.extractText(from: data, mimeType: effectiveMimeType)
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            syncStatus = "Skipped \(filename) (no extractable text)"
+            return 0
         }
-        // Clear chunks from a previous, longer version of this document,
-        // otherwise stale trailing chunks linger in the index forever.
-        LocalVectorStore.shared.deleteAll(withPrefix: "\(fileId)_chunk")
-        for (i, chunk) in chunks.enumerated() {
-            try await VectorDBService.shared.upsert(
-                id: "\(fileId)_chunk\(i)",
-                content: chunk,
-                type: "document",
-                metadata: [
-                    "title": filename,
-                    "file_id": fileId,
-                    "source": "google_drive",
-                    "chunk": i
-                ]
-            )
-        }
-        syncStatus = "Indexed \(filename) (\(chunks.count) chunks)"
-        return chunks.count
+
+        let chunks = try await RAGService.shared.index(
+            sourceId: fileId,
+            type: "document",
+            title: filename,
+            fullText: text,
+            subtitle: "Google Drive",
+            sourceDate: nil
+        )
+
+        syncStatus = "Indexed \(filename) (\(chunks) chunks)"
+        return chunks
     }
 
-    // MARK: - On-Device Text Extraction
-
-    /// Extracts plain text on-device. PDFKit covers PDFs — including Google Docs,
-    /// which are exported as PDF above — and UTF-8 text files. Other binary
-    /// formats (.docx, .pptx) aren't supported; there's no backend to parse them.
-    private func extractTextOnDevice(from data: Data, mimeType: String, filename: String) throws -> String {
-        let lower = filename.lowercased()
-
-        if mimeType == "application/pdf" || lower.hasSuffix(".pdf") {
-            guard let doc = PDFDocument(data: data) else {
-                throw DriveError.processingFailed("Could not read \(filename) as a PDF.")
-            }
+    /// Extract plain text from a downloaded document. PDFs (incl. exported Google
+    /// Docs/Slides) are parsed with PDFKit; text/CSV/Markdown are decoded directly.
+    /// Binary formats like .docx aren't extractable on-device without extra
+    /// dependencies and are skipped.
+    private static func extractText(from data: Data, mimeType: String) -> String {
+        if mimeType.contains("pdf") {
+            guard let doc = PDFDocument(data: data) else { return "" }
             var text = ""
-            for i in 0 ..< doc.pageCount {
-                if let page = doc.page(at: i), let pageText = page.string {
-                    text += pageText + "\n"
+            for i in 0..<doc.pageCount {
+                if let page = doc.page(at: i), let s = page.string {
+                    text += s + "\n"
                 }
             }
             return text
         }
-
-        if mimeType.hasPrefix("text/") || lower.hasSuffix(".txt") || lower.hasSuffix(".md")
-            || lower.hasSuffix(".csv") || lower.hasSuffix(".json") {
-            guard let text = String(data: data, encoding: .utf8) else {
-                throw DriveError.processingFailed("Could not decode \(filename) as text.")
-            }
-            return text
+        if mimeType.hasPrefix("text/") || mimeType.contains("csv") || mimeType.contains("markdown") {
+            return String(data: data, encoding: .utf8) ?? ""
         }
-
-        throw DriveError.processingFailed(
-            "MindVault can index PDFs, Google Docs, and text files. \(filename) is a format it can't extract text from on-device."
-        )
-    }
-
-    /// Splits text into overlapping chunks so retrieval can target sections
-    /// rather than whole documents.
-    private static func chunk(_ text: String, size: Int = 1500, overlap: Int = 200) -> [String] {
-        let cleaned = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty else { return [] }
-        guard cleaned.count > size else { return [cleaned] }
-
-        var chunks: [String] = []
-        var start = cleaned.startIndex
-        while start < cleaned.endIndex {
-            let end = cleaned.index(start, offsetBy: size, limitedBy: cleaned.endIndex) ?? cleaned.endIndex
-            let piece = cleaned[start ..< end].trimmingCharacters(in: .whitespacesAndNewlines)
-            if !piece.isEmpty { chunks.append(piece) }
-            if end == cleaned.endIndex { break }
-            start = cleaned.index(end, offsetBy: -overlap, limitedBy: cleaned.startIndex) ?? end
-        }
-        return chunks
+        // Unsupported binary format (e.g. .docx) — skip rather than index garbage.
+        return ""
     }
     
     func syncFolder(folderId: String, recursive: Bool = false) async throws -> (processed: Int, failed: Int) {
@@ -588,6 +566,13 @@ struct DriveFileItem: Identifiable {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: size)
     }
+}
+
+struct DocumentUpsertResponse: Codable {
+    let success: Bool
+    let message: String
+    let chunks_created: Int
+    let filename: String?
 }
 
 enum DriveError: LocalizedError {

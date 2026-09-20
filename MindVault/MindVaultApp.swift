@@ -21,7 +21,8 @@ struct MindVaultApp: App {
                 ChatMessage.self,
                 Conversation.self,
                 EmailAccount.self,
-                EmailMessage.self
+                EmailMessage.self,
+                IndexedChunk.self
             ])
             
             let modelConfiguration = ModelConfiguration(

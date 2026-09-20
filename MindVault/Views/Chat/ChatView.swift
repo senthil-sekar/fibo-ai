@@ -23,8 +23,10 @@ struct ChatView: View {
     @StateObject private var ragService = RAGService.shared
     @StateObject private var speechRecognition = SpeechRecognitionService.shared
     @StateObject private var textToSpeech = TextToSpeechService.shared
+    @StateObject private var models = ModelManager.shared
     @FocusState private var isInputFocused: Bool
     @State private var showingVoicePermissionAlert = false
+    @State private var streamingText = ""
     
     var body: some View {
         NavigationStack {
@@ -34,7 +36,11 @@ struct ChatView: View {
                 } else {
                     messageListView
                 }
-                
+
+                if !models.isReady {
+                    modelStatusBanner
+                }
+
                 inputBarView
             }
             .navigationTitle("AI Assistant")
@@ -157,7 +163,19 @@ struct ChatView: View {
                         .id(message.id)
                     }
                     
-                    if isLoading {
+                    if !streamingText.isEmpty {
+                        // Live, in-flight assistant response (tokens streaming in).
+                        MessageBubble(
+                            message: ChatMessage(
+                                content: streamingText,
+                                role: MessageRole.assistant.rawValue,
+                                conversationId: currentConversation?.id ?? UUID()
+                            ),
+                            onShowContext: {},
+                            onFeedback: { _ in }
+                        )
+                        .id("streaming")
+                    } else if isLoading {
                         HStack {
                             TypingIndicator()
                             Spacer()
@@ -180,6 +198,11 @@ struct ChatView: View {
                     }
                 }
             }
+            .onChange(of: streamingText) { _, _ in
+                withAnimation {
+                    proxy.scrollTo("streaming", anchor: .bottom)
+                }
+            }
         }
     }
     
@@ -200,8 +223,8 @@ struct ChatView: View {
                         .background(speechRecognition.isRecording ? Color.red.opacity(0.1) : Color.indigo.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .disabled(isLoading)
-                
+                .disabled(isLoading || !models.isReady)
+
                 TextField("Ask me anything...", text: $inputText, axis: .vertical)
                     .textFieldStyle(.plain)
                     .padding(12)
@@ -222,7 +245,7 @@ struct ChatView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(inputText.isEmpty ? .gray : .indigo)
                 }
-                .disabled(inputText.isEmpty || isLoading)
+                .disabled(inputText.isEmpty || isLoading || !models.isReady)
             }
             .padding()
         }
@@ -242,18 +265,24 @@ struct ChatView: View {
     // MARK: - Functions
     private func sendMessage() {
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
+        guard models.isReady else { return }
+
         let userMessage = inputText
         inputText = ""
         isInputFocused = false
-        
+
+        // Conversation history (prior turns) before we append the new message.
+        let history: [(role: String, content: String)] = messages
+            .suffix(10)
+            .map { (role: $0.role, content: $0.content) }
+
         // Create or get conversation
         if currentConversation == nil {
             let conversation = Conversation(title: String(userMessage.prefix(50)))
             modelContext.insert(conversation)
             currentConversation = conversation
         }
-        
+
         // Add user message
         let userChatMessage = ChatMessage(
             content: userMessage,
@@ -262,33 +291,79 @@ struct ChatView: View {
         )
         modelContext.insert(userChatMessage)
         messages.append(userChatMessage)
-        
-        // Get AI response
+
+        // Stream the assistant response.
         isLoading = true
-        
+        streamingText = ""
+
         Task {
+            var collected: [ChatContext] = []
+            var accumulated = ""
             do {
-                let (response, contexts) = await ragService.generateResponse(to: userMessage)
-                
-                await MainActor.run {
-                    let assistantMessage = ChatMessage(
-                        content: response,
-                        role: MessageRole.assistant.rawValue,
-                        conversationId: currentConversation!.id,
-                        contextIds: contexts.map { $0.documentId },
-                        contextSnippets: contexts.map { $0.snippet },
-                        contextTitles: contexts.map { $0.title },
-                        contextTypes: contexts.map { $0.documentType },
-                        contextScores: contexts.map { $0.relevanceScore }
-                    )
-                    modelContext.insert(assistantMessage)
-                    messages.append(assistantMessage)
-                    
-                    currentConversation?.updatedAt = Date()
-                    isLoading = false
+                for try await event in ragService.streamResponse(to: userMessage, history: history) {
+                    switch event {
+                    case .sources(let contexts):
+                        collected = contexts
+                    case .token(let delta):
+                        accumulated += delta
+                        streamingText = accumulated
+                        isLoading = false   // first token arrived; drop typing indicator
+                    }
+                }
+            } catch {
+                if accumulated.isEmpty {
+                    accumulated = "Sorry — \(error.localizedDescription)"
                 }
             }
+
+            let assistantMessage = ChatMessage(
+                content: accumulated,
+                role: MessageRole.assistant.rawValue,
+                conversationId: currentConversation!.id,
+                contextIds: collected.map { $0.documentId },
+                contextSnippets: collected.map { $0.snippet },
+                contextTitles: collected.map { $0.title },
+                contextTypes: collected.map { $0.documentType },
+                contextScores: collected.map { $0.relevanceScore }
+            )
+            modelContext.insert(assistantMessage)
+            messages.append(assistantMessage)
+
+            streamingText = ""
+            isLoading = false
+            currentConversation?.updatedAt = Date()
+            try? modelContext.save()
         }
+    }
+
+    // MARK: - Model Loading Banner
+    private var modelStatusBanner: some View {
+        HStack(spacing: 12) {
+            if case .failed(let message) = models.phase {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Model unavailable").font(.subheadline).fontWeight(.semibold)
+                    Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
+                Spacer()
+                Button("Retry") { Task { await models.prepare() } }
+                    .buttonStyle(.bordered)
+            } else {
+                ProgressView()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(models.statusMessage.isEmpty ? "Loading on-device AI…" : models.statusMessage)
+                        .font(.subheadline)
+                    if models.phase == .downloading, models.downloadProgress > 0 {
+                        ProgressView(value: models.downloadProgress)
+                            .progressViewStyle(.linear)
+                    }
+                }
+                Spacer()
+            }
+        }
+        .padding(12)
+        .background(.ultraThinMaterial)
     }
     
     private func startNewConversation() {
