@@ -1,6 +1,6 @@
 //
 //  SkillsView.swift
-//  MindVault
+//  Fibo
 //
 //  Profile item editor and detail views
 //

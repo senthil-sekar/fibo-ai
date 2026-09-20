@@ -1,6 +1,6 @@
 //
 //  JournalEntryView.swift
-//  MindVault
+//  Fibo
 //
 //  Detail view for a journal entry
 //
@@ -271,7 +271,7 @@ struct JournalEntryView: View {
         \(entry.content)
         
         ---
-        Written in MindVault
+        Written in Fibo
         """
         
         let activityVC = UIActivityViewController(

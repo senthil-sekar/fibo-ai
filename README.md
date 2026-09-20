@@ -1,4 +1,4 @@
-# MindVault 🧠
+# Fibo 🧠
 
 A personal AI-powered journal assistant that remembers everything about you. Write journal entries, record your skills, education, and experiences, and let your AI assistant answer questions about your life — entirely on your phone.
 
@@ -10,13 +10,30 @@ A personal AI-powered journal assistant that remembers everything about you. Wri
 - 🎤 **Voice Support**: Speak your thoughts and have AI responses read aloud — dictation is always on-device, in both AI modes
 - 📧 **Email Integration**: Connect Gmail, sync messages, and ask the AI about them in Chat (configurable in-app)
 - 🔍 **RAG-Powered**: Retrieval-Augmented Generation — on-device embedding and vector search surface relevant context before the model answers
-- 🔒 **Privacy by design**: No self-hosted backend, no server MindVault operates. Retrieval always runs on your phone; the only thing that ever leaves it is your question, and only if you choose BYOK
+- 🔒 **Privacy by design**: No self-hosted backend, no server Fibo operates. Retrieval always runs on your phone; the only thing that ever leaves it is your question, and only if you choose BYOK
 - 📱 **Runs standalone**: No Mac, no Docker, no server — the whole pipeline fits on the iPhone itself
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/journal.png" width="200"/><br/>Journal</td>
+    <td align="center"><img src="docs/screenshots/ai-chat.png" width="200"/><br/>AI Chat</td>
+    <td align="center"><img src="docs/screenshots/profile.png" width="200"/><br/>Profile</td>
+    <td align="center"><img src="docs/screenshots/drive-connect.jpeg" width="200"/><br/>Google Drive</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/settings.jpeg" width="200"/><br/>Settings — AI Mode</td>
+    <td align="center"><img src="docs/screenshots/model-browser-downloading.jpeg" width="200"/><br/>Browse Models — downloading</td>
+    <td align="center"><img src="docs/screenshots/model-browser-active.png" width="200"/><br/>Browse Models — active</td>
+    <td></td>
+  </tr>
+</table>
 
 ## AI Modes
 
 Pick a mode in **Profile → Settings → AI Mode**. There is no self-hosted backend and never
-will be — MindVault doesn't host infrastructure for you. Retrieval (embedding + vector search)
+will be — Fibo doesn't host infrastructure for you. Retrieval (embedding + vector search)
 always happens on-device in both modes; only generation differs:
 
 | Mode | Retrieval | Generation | Leaves the device? |
@@ -54,23 +71,29 @@ all verified to fit an iPhone 16 Plus (A18, 8 GB RAM):
 **File → Add Package Dependencies…**:
 
 1. `https://github.com/ml-explore/mlx-swift-lm` (Up to Next Major, from `3.31.3`)
-   → add **MLXLLM**, **MLXLMCommon**, and **MLXHuggingFace** to the MindVault target
+   → add **MLXLLM**, **MLXLMCommon**, and **MLXHuggingFace** to the Fibo target
 2. `https://github.com/huggingface/swift-transformers` (Up to Next Major, from `1.3.4`)
-   → add **Tokenizers** to the MindVault target
+   → add **Tokenizers** to the Fibo target
 
 The second package is easy to miss: mlx-swift-lm's tokenizer loader expands to code
 that calls into `swift-transformers` directly, but mlx-swift-lm doesn't declare it as
 a package dependency — Xcode won't pull it in for you.
 
-**⚠️ MLX cannot run in the iOS Simulator — you need a physical device.** MLX requires a
-Metal `MTLGPUFamily` the Simulator doesn't provide; trying anyway fails with `failed
-assertion 'Dispatch Threads with Non-Uniform Threadgroup Size is not supported on this
-device'`. That's a platform limitation, not a bug in this code. Options:
-- Run on a physical iPhone (A17 Pro or newer for good performance)
+**⚠️ Both MLX and NLEmbedding need a physical device — the Simulator can't run either.**
+MLX requires a Metal `MTLGPUFamily` the Simulator doesn't provide; trying anyway fails
+with `failed assertion 'Dispatch Threads with Non-Uniform Threadgroup Size is not
+supported on this device'`. Separately, `NLEmbedding.sentenceEmbedding` — the retrieval
+embedding used in *both* AI modes — reliably returns `nil` in the Simulator even though
+the exact same code works on real hardware; Fibo surfaces this as "On-device
+sentence embedding model is not available on this device." Both are platform
+limitations, not bugs in this code. Options:
+- Run on a physical iPhone (A17 Pro or newer for good MLX performance; any iOS 17+
+  device works for NLEmbedding/BYOK)
 - Add the **"Mac (Designed for iPad)"** destination in Xcode and run there instead —
-  Apple Silicon Macs have a full Metal GPU
-- Everything else (journal, profile, BYOK mode, retrieval) works fine in the Simulator
-  as always; only MLX generation needs real Apple Silicon
+  Apple Silicon Macs have a full Metal GPU and NLEmbedding works there too
+- Everything that doesn't touch embedding or MLX generation (journal/profile editing,
+  email/Drive account management, BYOK key entry) works fine in the Simulator; anything
+  that indexes or searches content, or generates on-device, needs real hardware
 
 **Memory:** iOS kills apps that use too much RAM ([jetsam](https://developer.apple.com/documentation/xcode/identifying-high-memory-use-with-jetsam-event-reports)).
 The larger catalog models (Gemma 3 4B, Mistral 7B) may need the
@@ -82,16 +105,16 @@ Fast-tier models (~0.7–0.8 GB).
 Requires **Xcode 26+** (mlx-swift-lm is swift-tools-version 6.2) and iOS 17+. An A17 Pro
 or newer device is recommended — inference runs on the GPU via Metal. Until both packages
 are linked, the app builds and runs normally and On-Device mode reports that generation
-isn't available yet; retrieval and embedding already work without it.
+isn't available yet.
 
-> Google Drive documents: MindVault indexes PDFs, Google Docs, and text files on-device using
+> Google Drive documents: Fibo indexes PDFs, Google Docs, and text files on-device using
 > PDFKit. `.docx` / `.pptx` aren't supported — there's no backend to parse them.
 
 ## Architecture
 
 ```mermaid
 graph TB
-    subgraph iOS["MindVault — iOS App (SwiftUI + SwiftData)"]
+    subgraph iOS["Fibo — iOS App (SwiftUI + SwiftData)"]
         UI["User Interface<br/>Journal • Chat • Profile • Email • Drive"]
 
         subgraph Retrieval["On-Device Retrieval — always, both AI modes"]
@@ -129,7 +152,7 @@ graph TB
     style CloudOptional fill:#fff3e0,stroke:#e65100,stroke-width:2px
 ```
 
-There is no backend and no server MindVault hosts for you. Everything under "iOS App" runs
+There is no backend and no server Fibo hosts for you. Everything under "iOS App" runs
 inside the app process on the phone. The only network calls the app ever makes are: (1) OpenAI's
 API, only in BYOK mode, only with your own key; (2) Hugging Face, only when you tap Download on a
 model in Browse Models; (3) Google OAuth/Gmail/Drive, only if you connect those integrations.
@@ -228,8 +251,8 @@ flowchart LR
 
 ```bash
 git clone <repo-url>
-cd MindVault
-open MindVault.xcodeproj
+cd Fibo
+open Fibo.xcodeproj
 ```
 
 Then in Xcode: select a device or simulator, and build & run (⌘R).
@@ -250,9 +273,9 @@ Skip this and the app runs fine with those integrations disabled.
 ## Project Structure
 
 ```
-MindVault/
-├── MindVault/                    # iOS App — this is the whole product
-│   ├── MindVaultApp.swift        # App entry point
+Fibo/
+├── Fibo/                    # iOS App — this is the whole product
+│   ├── FiboApp.swift        # App entry point
 │   ├── ContentView.swift         # Main content view
 │   ├── Models/                   # SwiftData models
 │   │   ├── JournalEntry.swift
@@ -341,7 +364,7 @@ Add comprehensive profile items:
 ### Running Tests
 
 ```bash
-# iOS: no test target exists yet (MindVault.xcodeproj has a single
+# iOS: no test target exists yet (Fibo.xcodeproj has a single
 # PBXNativeTarget, the app itself). Verify iOS changes by building and
 # running in Xcode.
 ```
@@ -360,11 +383,11 @@ npm start        # or: npm run dev  (tsx watch)
 
 ## Privacy & Security
 
-- No self-hosted backend, no server MindVault operates — there's nothing to trust beyond
+- No self-hosted backend, no server Fibo operates — there's nothing to trust beyond
   the app itself, Apple's frameworks, and whichever cloud API you explicitly opt into
 - API keys are stored securely in iOS Keychain and never logged
 - Email OAuth tokens are hardware-encrypted in Keychain
-- Dictation always uses on-device speech recognition, in both AI modes — MindVault refuses
+- Dictation always uses on-device speech recognition, in both AI modes — Fibo refuses
   to fall back to Apple's servers rather than silently uploading audio
 
 What leaves the device depends on the AI mode:

@@ -1,6 +1,6 @@
 //
 //  KeychainService.swift
-//  MindVault
+//  Fibo
 //
 //  Secure credential storage using iOS Keychain
 //
@@ -11,7 +11,7 @@ import Security
 class KeychainService {
     static let shared = KeychainService()
     
-    private let service = "com.mindvault.app"
+    private let service = "com.fibo.app"
     
     private init() {}
     

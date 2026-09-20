@@ -1,10 +1,10 @@
 //
 //  RAGService.swift
-//  MindVault
+//  Fibo
 //
-//  On-device Retrieval-Augmented Generation. Orchestrates the local
-//  EmbeddingEngine + VectorStore (retrieval) and LLMEngine (generation).
-//  No backend, no network at inference time.
+//  On-device Retrieval-Augmented Generation. Orchestrates VectorDBService
+//  (retrieval, always on-device in both AI modes) and the active LLMProvider
+//  (generation — on-device MLX or OpenAI BYOK, per Settings → AI Mode).
 //
 
 import Foundation
@@ -18,8 +18,7 @@ final class RAGService: ObservableObject {
     @Published var processingStatus: String = ""
     @Published var lastError: String?
 
-    private let models = ModelManager.shared
-    private var vectorStore: VectorStore?
+    private let vectorDB = VectorDBService.shared
 
     private init() {}
 
@@ -30,34 +29,43 @@ final class RAGService: ObservableObject {
     }
 
     enum RAGError: LocalizedError {
-        case notConfigured
         case modelsNotReady
         var errorDescription: String? {
             switch self {
-            case .notConfigured: return "The on-device store isn't ready yet."
-            case .modelsNotReady: return "The AI models are still loading. Please wait a moment."
+            case .modelsNotReady: return "The AI model isn't ready. Check Settings → AI Mode."
             }
         }
     }
 
     // MARK: - Wiring
 
-    /// Must be called once at app start with the SwiftData context, so the
-    /// VectorStore can read/write IndexedChunk rows.
-    func configure(modelContext: ModelContext) {
-        if vectorStore == nil {
-            vectorStore = VectorStore(modelContext: modelContext, embedder: models.embedder)
+    /// No-op: retrieval (VectorDBService/LocalVectorStore) needs no SwiftData
+    /// context. Kept so ContentView's launch-time call site doesn't need to change.
+    func configure(modelContext: ModelContext) {}
+
+    // MARK: - Readiness
+
+    /// Whether the active AI mode's provider is ready to generate (BYOK: a key
+    /// is saved; On-Device: a model is downloaded and selected).
+    var isReady: Bool {
+        switch Configuration.llmMode {
+        case .openAI:
+            return !((try? KeychainService.shared.retrieveAPIKey(for: "openai")) ?? "").isEmpty
+        case .localLLM:
+            let path = Configuration.BYOK.localModelPath
+            guard !path.isEmpty else { return false }
+            return FileManager.default.fileExists(
+                atPath: URL(fileURLWithPath: path).appendingPathComponent("config.json").path)
         }
     }
 
     // MARK: - Indexing
 
     func embedJournalEntry(_ entry: JournalEntry) async {
-        guard let vectorStore else { return }
         isProcessing = true
         processingStatus = "Indexing entry…"
         do {
-            try await vectorStore.index(
+            _ = try await index(
                 sourceId: entry.id.uuidString,
                 type: "journal",
                 title: entry.title.isEmpty ? "Journal Entry" : entry.title,
@@ -78,11 +86,10 @@ final class RAGService: ObservableObject {
     }
 
     func embedProfileItem(_ item: ProfileItem) async {
-        guard let vectorStore else { return }
         isProcessing = true
         processingStatus = "Indexing profile item…"
         do {
-            try await vectorStore.index(
+            _ = try await index(
                 sourceId: item.id.uuidString,
                 type: "profile",
                 title: item.title.isEmpty ? item.type : item.title,
@@ -103,15 +110,16 @@ final class RAGService: ObservableObject {
     }
 
     func deleteEntry(_ entry: JournalEntry) async {
-        vectorStore?.deleteSource(entry.id.uuidString)
+        vectorDB.deleteSource(entry.id.uuidString)
     }
 
     func deleteProfileItem(_ item: ProfileItem) async {
-        vectorStore?.deleteSource(item.id.uuidString)
+        vectorDB.deleteSource(item.id.uuidString)
     }
 
-    /// Generic indexing entry point used by Email/Drive ingestion.
-    /// Returns the number of chunks stored.
+    /// Generic indexing entry point used by Email/Drive ingestion. Splits
+    /// `fullText` into overlapping chunks and embeds each one. Returns the
+    /// number of chunks stored.
     @discardableResult
     func index(
         sourceId: String,
@@ -121,29 +129,33 @@ final class RAGService: ObservableObject {
         subtitle: String = "",
         sourceDate: Date? = nil
     ) async throws -> Int {
-        guard let vectorStore else { throw RAGError.notConfigured }
-        return try await vectorStore.index(
-            sourceId: sourceId,
-            type: type,
-            title: title,
-            fullText: fullText,
-            subtitle: subtitle,
-            sourceDate: sourceDate
-        )
+        vectorDB.deleteSource(sourceId)
+
+        let chunks = TextChunker.chunk(fullText)
+        guard !chunks.isEmpty else { return 0 }
+
+        for (i, chunkText) in chunks.enumerated() {
+            try await vectorDB.upsert(
+                id: "\(sourceId)#\(i)",
+                content: chunkText,
+                type: type,
+                title: title,
+                subtitle: subtitle,
+                sourceDate: sourceDate
+            )
+        }
+        return chunks.count
     }
 
     /// Remove all chunks for a source (journal/profile/email/document).
     func removeSource(_ sourceId: String) {
-        vectorStore?.deleteSource(sourceId)
+        vectorDB.deleteSource(sourceId)
     }
 
     /// Wipe the entire on-device index (used by "Clear AI Data").
     func clearIndex() {
-        try? vectorStore?.deleteAll()
+        vectorDB.deleteAll()
     }
-
-    /// Whether indexing/search can run right now.
-    var isReady: Bool { vectorStore != nil && models.isReady }
 
     // MARK: - Retrieval + Generation (streaming)
 
@@ -155,14 +167,11 @@ final class RAGService: ObservableObject {
     ) -> AsyncThrowingStream<RAGEvent, Error> {
         AsyncThrowingStream { continuation in
             Task {
-                guard let vectorStore else {
-                    continuation.finish(throwing: RAGError.notConfigured); return
-                }
-                guard models.isReady else {
+                guard isReady else {
                     continuation.finish(throwing: RAGError.modelsNotReady); return
                 }
                 do {
-                    let hits = try await vectorStore.search(query)
+                    let hits = try await vectorDB.search(query: query)
                     let contexts = hits.map { hit in
                         ChatContext(
                             documentId: hit.sourceId,
@@ -187,11 +196,12 @@ final class RAGService: ObservableObject {
 
                     let contextBlock = Self.buildContextBlock(hits)
                     let userMessage = "CONTEXT:\n\(contextBlock)\n\nQUESTION: \(query)"
+                    let providerHistory = history.map { ["role": $0.role, "content": $0.content] }
 
-                    let stream = await models.llm.generate(
-                        system: OnDeviceConfig.systemPrompt,
-                        user: userMessage,
-                        history: history
+                    let stream = LLMService.activeProvider.streamComplete(
+                        systemPrompt: Configuration.LLM.systemPrompt,
+                        userMessage: userMessage,
+                        history: providerHistory
                     )
                     for try await delta in stream {
                         continuation.yield(.token(delta))
@@ -259,7 +269,7 @@ final class RAGService: ObservableObject {
     // MARK: - Insights
 
     func generateInsights(from entries: [JournalEntry]) async -> String? {
-        guard !entries.isEmpty, models.isReady else { return nil }
+        guard !entries.isEmpty, isReady else { return nil }
         isProcessing = true
         processingStatus = "Analyzing your journal…"
         defer { isProcessing = false }
@@ -273,9 +283,9 @@ final class RAGService: ObservableObject {
         \(recent)
         """
         do {
-            return try await models.llm.generateComplete(
-                system: OnDeviceConfig.systemPrompt,
-                user: prompt,
+            return try await LLMService.activeProvider.complete(
+                systemPrompt: Configuration.LLM.systemPrompt,
+                userMessage: prompt,
                 history: []
             )
         } catch {
@@ -293,7 +303,7 @@ final class RAGService: ObservableObject {
     }()
 
     private static func buildContextBlock(_ hits: [RetrievedChunk]) -> String {
-        hits.prefix(OnDeviceConfig.maxContextChunks).enumerated().map { index, hit in
+        hits.prefix(Configuration.RAG.maxContextChunks).enumerated().map { index, hit in
             let label: String
             switch hit.type {
             case "email":

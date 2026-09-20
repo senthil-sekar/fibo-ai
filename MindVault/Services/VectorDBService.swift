@@ -1,12 +1,25 @@
 //
 //  VectorDBService.swift
-//  MindVault
+//  Fibo
 //
-//  Thin wrapper around LocalVectorStore: handles embedding text before storage,
-//  flattening caller metadata, and shaping search results as SearchResult.
+//  Thin wrapper around LocalVectorStore: handles embedding text before storage
+//  and shaping search results as RetrievedChunk. Chunking is owned by the
+//  caller (RAGService) — this stays a one-document-in, one-document-out API.
 //
 
 import Foundation
+
+/// A chunk returned from a similarity search, with its relevance score.
+struct RetrievedChunk: Identifiable {
+    let id: String
+    let sourceId: String
+    let type: String
+    let title: String
+    let text: String
+    let subtitle: String
+    let sourceDate: Date?
+    let score: Float
+}
 
 @MainActor
 class VectorDBService: ObservableObject {
@@ -14,59 +27,83 @@ class VectorDBService: ObservableObject {
 
     @Published var lastError: String?
 
+    private static let sourceDateKey = "sourceDate"
+    private static let subtitleKey = "subtitle"
+
     private init() {}
 
-    // MARK: - Upsert Document
-    func upsert(id: String, content: String, type: String, metadata: [String: Any]) async throws {
-        let title = (metadata["title"] as? String)
-            ?? (metadata["subject"] as? String)
-            ?? type
+    // MARK: - Upsert
+
+    /// Embed and store a single chunk. `id` should be `"\(sourceId)#\(index)"`
+    /// for multi-chunk sources so `deleteSource` can remove them all together.
+    func upsert(
+        id: String,
+        content: String,
+        type: String,
+        title: String,
+        subtitle: String = "",
+        sourceDate: Date? = nil
+    ) async throws {
         let vector = try EmbeddingService.embedLocally(content)
-        // Preserve caller metadata (thread_id, file_id, chunk, from, date…)
-        // rather than dropping everything but the title.
-        var flat: [String: String] = [:]
-        for (key, value) in metadata where key != "title" {
-            if let array = value as? [String] {
-                flat[key] = array.joined(separator: ", ")
-            } else {
-                flat[key] = String(describing: value)
-            }
+        var metadata: [String: String] = [:]
+        if !subtitle.isEmpty { metadata[Self.subtitleKey] = subtitle }
+        if let sourceDate {
+            metadata[Self.sourceDateKey] = ISO8601DateFormatter().string(from: sourceDate)
         }
         LocalVectorStore.shared.upsert(LocalVectorStore.VectorDocument(
             id: id, type: type, title: title,
             content: content, vector: vector, indexedAt: Date(),
-            metadata: flat
+            metadata: metadata
         ))
         lastError = nil
     }
 
-    // MARK: - Delete Document
-    func delete(id: String) async throws {
+    // MARK: - Delete
+
+    func delete(id: String) {
         LocalVectorStore.shared.delete(id: id)
-        lastError = nil
+    }
+
+    /// Remove every chunk belonging to a source (all ids sharing its `"\(sourceId)#"` prefix).
+    func deleteSource(_ sourceId: String) {
+        LocalVectorStore.shared.deleteAll(withPrefix: "\(sourceId)#")
+    }
+
+    func deleteAll() {
+        LocalVectorStore.shared.deleteAll()
     }
 
     // MARK: - Search
-    func search(query: String, topK: Int = Configuration.RAG.topK, filter: [String: Any]? = nil) async throws -> [SearchResult] {
+
+    func search(
+        query: String,
+        type: String? = nil,
+        topK: Int = Configuration.RAG.topK
+    ) async throws -> [RetrievedChunk] {
         let queryVector = try EmbeddingService.embedLocally(query)
         let matches = LocalVectorStore.shared.search(
-            queryVector: queryVector,
-            topK: topK,
-            typeFilter: filter?["type"] as? String
+            queryVector: queryVector, topK: topK, typeFilter: type
         )
         lastError = nil
         return matches.map { match in
-            var meta: [String: AnyCodable] = [
-                "type":  AnyCodable(match.type),
-                "title": AnyCodable(match.title)
-            ]
-            for (key, value) in match.metadata { meta[key] = AnyCodable(value) }
-            return SearchResult(
+            let sourceDate = match.metadata[Self.sourceDateKey]
+                .flatMap { ISO8601DateFormatter().date(from: $0) }
+            let sourceId = match.id.split(separator: "#", maxSplits: 1).first.map(String.init) ?? match.id
+            return RetrievedChunk(
                 id: match.id,
-                score: match.score,
-                metadata: meta,
-                content: match.content
+                sourceId: sourceId,
+                type: match.type,
+                title: match.title,
+                text: match.content,
+                subtitle: match.metadata[Self.subtitleKey] ?? "",
+                sourceDate: sourceDate,
+                score: match.score
             )
         }
+    }
+
+    /// Count of indexed chunks (for stats / debugging).
+    func chunkCount() -> Int {
+        LocalVectorStore.shared.documentCount
     }
 }

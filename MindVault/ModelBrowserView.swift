@@ -1,6 +1,6 @@
 //
 //  ModelBrowserView.swift
-//  MindVault
+//  Fibo
 //
 //  On-device model picker: browse, download, and select MLX models.
 //

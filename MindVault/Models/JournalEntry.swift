@@ -1,6 +1,6 @@
 //
 //  JournalEntry.swift
-//  MindVault
+//  Fibo
 //
 //  SwiftData model for journal entries
 //
@@ -111,7 +111,7 @@ enum Category: String, CaseIterable, Codable {
         case .travel: return "airplane"
         case .creativity: return "paintbrush.fill"
         case .finance: return "dollarsign.circle.fill"
-        case .reflection: return "thought.bubble.fill"
+        case .reflection: return "quote.bubble.fill"
         }
     }
     

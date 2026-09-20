@@ -1,6 +1,6 @@
 # Gmail Integration — Configuration Guide
 
-Step-by-step setup of the Google OAuth client behind MindVault's Gmail sync, plus how the flow
+Step-by-step setup of the Google OAuth client behind Fibo's Gmail sync, plus how the flow
 works. For the short version see [ENABLING_EMAIL_FEATURES.md](ENABLING_EMAIL_FEATURES.md).
 
 ## Google Cloud setup
@@ -8,7 +8,7 @@ works. For the short version see [ENABLING_EMAIL_FEATURES.md](ENABLING_EMAIL_FEA
 ### 1. Project and API
 
 1. [console.cloud.google.com](https://console.cloud.google.com/) → **Select a project → New project**
-   (e.g. `mindvault`).
+   (e.g. `fibo`).
 2. **APIs & Services → Library** → **Gmail API** → **Enable**.
    Also enable **Google Drive API** if you plan to use the Drive tab.
 
@@ -20,7 +20,7 @@ works. For the short version see [ENABLING_EMAIL_FEATURES.md](ENABLING_EMAIL_FEA
    - `https://www.googleapis.com/auth/gmail.readonly`
    - `https://www.googleapis.com/auth/userinfo.email`
    - `openid`
-   These are exactly what `EmailService.gmailScope` requests. Read-only: MindVault never sends,
+   These are exactly what `EmailService.gmailScope` requests. Read-only: Fibo never sends,
    deletes, or modifies mail.
 4. **Test users** → add every Google account that will connect. While the app is in *Testing*, only
    these accounts can authorize it, and refresh tokens expire after 7 days.
@@ -31,8 +31,8 @@ works. For the short version see [ENABLING_EMAIL_FEATURES.md](ENABLING_EMAIL_FEA
 
 | Field | Value |
 |-------|-------|
-| Name | MindVault iOS |
-| Bundle ID | `com.mindvault.app` |
+| Name | Fibo iOS |
+| Bundle ID | `com.fibo.app` |
 
 Google returns a client ID of the form `<NUMBER>-<HASH>.apps.googleusercontent.com`. iOS clients
 have **no client secret** — the app uses PKCE instead, which is why nothing secret is checked into
@@ -56,10 +56,10 @@ GOOGLE_OAUTH_CLIENT_ID_PREFIX = <NUMBER>-<HASH>
 `Config.xcconfig` derives `GOOGLE_OAUTH_CLIENT_ID` from that prefix and includes the local file if
 present. Both are wired into the target as its base configuration, so:
 
-- `MindVault/Info.plist` → `GoogleOAuthClientID` = `$(GOOGLE_OAUTH_CLIENT_ID)`, plus the URL scheme
+- `Fibo/Info.plist` → `GoogleOAuthClientID` = `$(GOOGLE_OAUTH_CLIENT_ID)`, plus the URL scheme
   `com.googleusercontent.apps.$(GOOGLE_OAUTH_CLIENT_ID_PREFIX)`.
 - `Configuration.GoogleOAuth` reads that key at runtime and exposes `clientID`, `reversedClientID`,
-  `appRedirectURI` (Gmail: `com.mindvault.app:/oauth2redirect`) and `driveRedirectURI`
+  `appRedirectURI` (Gmail: `com.fibo.app:/oauth2redirect`) and `driveRedirectURI`
   (Drive: `com.googleusercontent.apps.<NUMBER>-<HASH>:/oauth2redirect`).
 - `EmailService` and `DriveService` consume those — no client IDs in Swift.
 
@@ -99,7 +99,7 @@ buttons stay disabled instead of failing mid-flow.
 |---------|-------|
 | Client ID | `Config.local.xcconfig` → Info.plist → `Configuration.GoogleOAuth.clientID` |
 | Redirect URIs | `Configuration.GoogleOAuth.appRedirectURI` / `.driveRedirectURI` |
-| URL schemes | `MindVault/Info.plist` → `CFBundleURLTypes` |
+| URL schemes | `Fibo/Info.plist` → `CFBundleURLTypes` |
 | Scopes | `EmailService.gmailScope`, `DriveService.scope` |
 | Sync interval | `EmailService.autoSyncInterval` (5 minutes) |
 | Messages per sync | `syncEmails(for:limit:)`, default 50 |
@@ -110,7 +110,7 @@ buttons stay disabled instead of failing mid-flow.
 | Error | Fix |
 |-------|-----|
 | Connect button disabled | `GOOGLE_OAUTH_CLIENT_ID_PREFIX` unset — `Config.local.xcconfig` missing or not picked up (clean build folder after creating it) |
-| `redirect_uri_mismatch` | The client is not an iOS client, or its bundle ID isn't `com.mindvault.app` |
+| `redirect_uri_mismatch` | The client is not an iOS client, or its bundle ID isn't `com.fibo.app` |
 | Browser opens, never returns | Redirect scheme missing from `CFBundleURLTypes` |
 | `invalid_client` | Client ID typo, or the client was deleted in the Console |
 | `access_denied` / "app not verified" | Account missing from the consent screen's **Test users** |

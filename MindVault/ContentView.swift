@@ -1,6 +1,6 @@
 //
 //  ContentView.swift
-//  MindVault
+//  Fibo
 //
 
 import SwiftUI
@@ -19,10 +19,7 @@ struct ContentView: View {
             }
         }
         .task {
-            // Wire the on-device store to SwiftData, then download/load the
-            // local models (no-op once ready). Indexing & chat wait on this.
             RAGService.shared.configure(modelContext: modelContext)
-            await ModelManager.shared.prepare()
         }
     }
 }
@@ -73,7 +70,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     
     let pages: [(title: String, description: String, icon: String)] = [
-        ("Welcome to MindVault", "Your personal AI-powered journal that remembers everything about you.", "brain.head.profile"),
+        ("Welcome to Fibo", "Your personal AI-powered journal that remembers everything about you.", "brain.head.profile"),
         ("Capture Your Life", "Write about your experiences, skills, education, and personal growth.", "pencil.and.outline"),
         ("Ask Anything", "Your AI assistant knows your entire history and can answer any question about you.", "sparkles")
     ]

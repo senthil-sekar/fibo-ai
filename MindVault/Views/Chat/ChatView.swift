@@ -1,6 +1,6 @@
 //
 //  ChatView.swift
-//  MindVault
+//  Fibo
 //
 //  AI Chat interface with RAG
 //
@@ -23,7 +23,6 @@ struct ChatView: View {
     @StateObject private var ragService = RAGService.shared
     @StateObject private var speechRecognition = SpeechRecognitionService.shared
     @StateObject private var textToSpeech = TextToSpeechService.shared
-    @StateObject private var models = ModelManager.shared
     @FocusState private var isInputFocused: Bool
     @State private var showingVoicePermissionAlert = false
     @State private var streamingText = ""
@@ -37,7 +36,7 @@ struct ChatView: View {
                     messageListView
                 }
 
-                if !models.isReady {
+                if !ragService.isReady {
                     modelStatusBanner
                 }
 
@@ -223,7 +222,7 @@ struct ChatView: View {
                         .background(speechRecognition.isRecording ? Color.red.opacity(0.1) : Color.indigo.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .disabled(isLoading || !models.isReady)
+                .disabled(isLoading || !ragService.isReady)
 
                 TextField("Ask me anything...", text: $inputText, axis: .vertical)
                     .textFieldStyle(.plain)
@@ -245,7 +244,7 @@ struct ChatView: View {
                         .font(.system(size: 36))
                         .foregroundStyle(inputText.isEmpty ? .gray : .indigo)
                 }
-                .disabled(inputText.isEmpty || isLoading || !models.isReady)
+                .disabled(inputText.isEmpty || isLoading || !ragService.isReady)
             }
             .padding()
         }
@@ -265,7 +264,7 @@ struct ChatView: View {
     // MARK: - Functions
     private func sendMessage() {
         guard !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard models.isReady else { return }
+        guard ragService.isReady else { return }
 
         let userMessage = inputText
         inputText = ""
@@ -339,31 +338,25 @@ struct ChatView: View {
     // MARK: - Model Loading Banner
     private var modelStatusBanner: some View {
         HStack(spacing: 12) {
-            if case .failed(let message) = models.phase {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Model unavailable").font(.subheadline).fontWeight(.semibold)
-                    Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2)
-                }
-                Spacer()
-                Button("Retry") { Task { await models.prepare() } }
-                    .buttonStyle(.bordered)
-            } else {
-                ProgressView()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(models.statusMessage.isEmpty ? "Loading on-device AI…" : models.statusMessage)
-                        .font(.subheadline)
-                    if models.phase == .downloading, models.downloadProgress > 0 {
-                        ProgressView(value: models.downloadProgress)
-                            .progressViewStyle(.linear)
-                    }
-                }
-                Spacer()
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("AI not ready").font(.subheadline).fontWeight(.semibold)
+                Text(notReadyMessage).font(.caption).foregroundStyle(.secondary).lineLimit(2)
             }
+            Spacer()
         }
         .padding(12)
         .background(.ultraThinMaterial)
+    }
+
+    private var notReadyMessage: String {
+        switch Configuration.llmMode {
+        case .openAI:
+            return "Add your OpenAI API key in Profile → Settings → AI Mode."
+        case .localLLM:
+            return "Download and select a model in Profile → Settings → AI Mode → Browse Models."
+        }
     }
     
     private func startNewConversation() {

@@ -7,18 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D0297E782FD63F740019EFF8 /* LLMEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E752FD63F740019EFF8 /* LLMEngine.swift */; };
-		D0297E792FD63F740019EFF8 /* ModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E772FD63F740019EFF8 /* ModelManager.swift */; };
-		D0297E7A2FD63F740019EFF8 /* EmbeddingEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E742FD63F740019EFF8 /* EmbeddingEngine.swift */; };
-		D0297E7B2FD63F740019EFF8 /* ModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E762FD63F740019EFF8 /* ModelCatalog.swift */; };
-		D0297E7E2FD63FAD0019EFF8 /* VectorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E7D2FD63FAD0019EFF8 /* VectorStore.swift */; };
-		D0297E7F2FD63FAD0019EFF8 /* IndexedChunk.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0297E7C2FD63FAD0019EFF8 /* IndexedChunk.swift */; };
+		D01AD4F8305F84D100841D7A /* LLMProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AD4F6305F84D100841D7A /* LLMProvider.swift */; };
+		D01AD4F9305F84D100841D7A /* LocalVectorStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AD4F7305F84D100841D7A /* LocalVectorStore.swift */; };
+		D01AD4FC305F927500841D7A /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = D01AD4FB305F927500841D7A /* Tokenizers */; };
+		D01AD4FF305F929400841D7A /* HuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = D01AD4FE305F929400841D7A /* HuggingFace */; };
+		D01AD501305F9D0600841D7A /* TextChunker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AD500305F9D0600841D7A /* TextChunker.swift */; };
+		D01AD505305F9D7700841D7A /* ModelBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AD504305F9D7700841D7A /* ModelBrowserView.swift */; };
+		D01AD507305F9FF200841D7A /* ModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = D01AD506305F9FF200841D7A /* ModelCatalog.swift */; };
 		D030D84A2F46C29800A9B610 /* DriveView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D030D8482F46C29800A9B610 /* DriveView.swift */; };
 		D030D84C2F46C2AD00A9B610 /* DriveDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = D030D84B2F46C2AD00A9B610 /* DriveDocument.swift */; };
 		D030D84E2F46C2B600A9B610 /* DriveService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D030D84D2F46C2B600A9B610 /* DriveService.swift */; };
 		D0954EF42F37A77900A58439 /* TextToSpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0954EF32F37A77900A58439 /* TextToSpeechService.swift */; };
 		D0954EF52F37A77900A58439 /* SpeechRecognitionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0954EF22F37A77900A58439 /* SpeechRecognitionService.swift */; };
-		D0954EF92F37B90500A58439 /* EmailProcessingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0954EF62F37B90500A58439 /* EmailProcessingService.swift */; };
 		D0954EFA2F37B90500A58439 /* EmailService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0954EF72F37B90500A58439 /* EmailService.swift */; };
 		D0954EFB2F37B90500A58439 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0954EF82F37B90500A58439 /* KeychainService.swift */; };
 		D0C870CF2F37F5BE0003AF7B /* EmailMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C870CE2F37F5BE0003AF7B /* EmailMessage.swift */; };
@@ -47,23 +47,20 @@
 		E01234562014 /* VectorDBService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560114 /* VectorDBService.swift */; };
 		E01234562015 /* LLMService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560115 /* LLMService.swift */; };
 		E01234562016 /* RAGService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560116 /* RAGService.swift */; };
-		E01234562017 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560117 /* APIClient.swift */; };
 		E01234562018 /* Configuration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E01234560118 /* Configuration.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		D0297E742FD63F740019EFF8 /* EmbeddingEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmbeddingEngine.swift; sourceTree = "<group>"; };
-		D0297E752FD63F740019EFF8 /* LLMEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMEngine.swift; sourceTree = "<group>"; };
-		D0297E762FD63F740019EFF8 /* ModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCatalog.swift; sourceTree = "<group>"; };
-		D0297E772FD63F740019EFF8 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
-		D0297E7C2FD63FAD0019EFF8 /* IndexedChunk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IndexedChunk.swift; sourceTree = "<group>"; };
-		D0297E7D2FD63FAD0019EFF8 /* VectorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorStore.swift; sourceTree = "<group>"; };
+		D01AD4F6305F84D100841D7A /* LLMProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvider.swift; sourceTree = "<group>"; };
+		D01AD4F7305F84D100841D7A /* LocalVectorStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalVectorStore.swift; sourceTree = "<group>"; };
+		D01AD500305F9D0600841D7A /* TextChunker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextChunker.swift; sourceTree = "<group>"; };
+		D01AD504305F9D7700841D7A /* ModelBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelBrowserView.swift; sourceTree = "<group>"; };
+		D01AD506305F9FF200841D7A /* ModelCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelCatalog.swift; sourceTree = "<group>"; };
 		D030D8482F46C29800A9B610 /* DriveView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveView.swift; sourceTree = "<group>"; };
 		D030D84B2F46C2AD00A9B610 /* DriveDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveDocument.swift; sourceTree = "<group>"; };
 		D030D84D2F46C2B600A9B610 /* DriveService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveService.swift; sourceTree = "<group>"; };
 		D0954EF22F37A77900A58439 /* SpeechRecognitionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechRecognitionService.swift; sourceTree = "<group>"; };
 		D0954EF32F37A77900A58439 /* TextToSpeechService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextToSpeechService.swift; sourceTree = "<group>"; };
-		D0954EF62F37B90500A58439 /* EmailProcessingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailProcessingService.swift; sourceTree = "<group>"; };
 		D0954EF72F37B90500A58439 /* EmailService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailService.swift; sourceTree = "<group>"; };
 		D0954EF82F37B90500A58439 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		D0C870CD2F37F5BE0003AF7B /* EmailAccount.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailAccount.swift; sourceTree = "<group>"; };
@@ -88,7 +85,6 @@
 		E01234560114 /* VectorDBService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VectorDBService.swift; sourceTree = "<group>"; };
 		E01234560115 /* LLMService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMService.swift; sourceTree = "<group>"; };
 		E01234560116 /* RAGService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RAGService.swift; sourceTree = "<group>"; };
-		E01234560117 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
 		E01234560118 /* Configuration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Configuration.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -97,8 +93,10 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D01AD4FF305F929400841D7A /* HuggingFace in Frameworks */,
 				D0F6DF022FDBC4A6008399F9 /* MLXVLM in Frameworks */,
 				D0F6DEFE2FDBC4A6008399F9 /* MLXLLM in Frameworks */,
+				D01AD4FC305F927500841D7A /* Tokenizers in Frameworks */,
 				D0F6DEFA2FDBC4A6008399F9 /* MLXEmbedders in Frameworks */,
 				D0F6DF002FDBC4A6008399F9 /* MLXLMCommon in Frameworks */,
 				D0F6DEFC2FDBC4A6008399F9 /* MLXHuggingFace in Frameworks */,
@@ -145,13 +143,10 @@
 		E01234570002 /* MindVault */ = {
 			isa = PBXGroup;
 			children = (
-				D0297E7C2FD63FAD0019EFF8 /* IndexedChunk.swift */,
-				D0297E7D2FD63FAD0019EFF8 /* VectorStore.swift */,
+				D01AD506305F9FF200841D7A /* ModelCatalog.swift */,
+				D01AD504305F9D7700841D7A /* ModelBrowserView.swift */,
+				D01AD500305F9D0600841D7A /* TextChunker.swift */,
 				E01234560101 /* MindVaultApp.swift */,
-				D0297E742FD63F740019EFF8 /* EmbeddingEngine.swift */,
-				D0297E752FD63F740019EFF8 /* LLMEngine.swift */,
-				D0297E762FD63F740019EFF8 /* ModelCatalog.swift */,
-				D0297E772FD63F740019EFF8 /* ModelManager.swift */,
 				E01234560102 /* ContentView.swift */,
 				E01234570004 /* Models */,
 				E01234570005 /* Views */,
@@ -198,8 +193,9 @@
 		E01234570006 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				D01AD4F6305F84D100841D7A /* LLMProvider.swift */,
+				D01AD4F7305F84D100841D7A /* LocalVectorStore.swift */,
 				D030D84D2F46C2B600A9B610 /* DriveService.swift */,
-				D0954EF62F37B90500A58439 /* EmailProcessingService.swift */,
 				D0954EF72F37B90500A58439 /* EmailService.swift */,
 				D0954EF82F37B90500A58439 /* KeychainService.swift */,
 				D0954EF22F37A77900A58439 /* SpeechRecognitionService.swift */,
@@ -215,7 +211,6 @@
 		E01234570007 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
-				E01234560117 /* APIClient.swift */,
 				E01234560118 /* Configuration.swift */,
 			);
 			path = Utilities;
@@ -270,6 +265,10 @@
 				D0297E8A2FD642AE0019EFF8 /* PBXTargetDependency */,
 			);
 			name = MindVault;
+			packageProductDependencies = (
+				D01AD4FB305F927500841D7A /* Tokenizers */,
+				D01AD4FE305F929400841D7A /* HuggingFace */,
+			);
 			productName = MindVault;
 			productReference = E01234560001 /* MindVault.app */;
 			productType = "com.apple.product-type.application";
@@ -301,6 +300,8 @@
 			packageReferences = (
 				D0297E802FD6402F0019EFF8 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				D04BF7902FD64C0B007BBC50 /* XCRemoteSwiftPackageReference "swift-numerics" */,
+				D01AD4FA305F927500841D7A /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				D01AD4FD305F929400841D7A /* XCRemoteSwiftPackageReference "swift-huggingface" */,
 			);
 			productRefGroup = E01234570003 /* Products */;
 			projectDirPath = "";
@@ -349,38 +350,35 @@
 			files = (
 				E01234562001 /* MindVaultApp.swift in Sources */,
 				E01234562002 /* ContentView.swift in Sources */,
-				D0297E782FD63F740019EFF8 /* LLMEngine.swift in Sources */,
-				D0297E792FD63F740019EFF8 /* ModelManager.swift in Sources */,
-				D0297E7A2FD63F740019EFF8 /* EmbeddingEngine.swift in Sources */,
-				D0297E7B2FD63F740019EFF8 /* ModelCatalog.swift in Sources */,
 				D030D84E2F46C2B600A9B610 /* DriveService.swift in Sources */,
 				D0F142282F38415900D51670 /* EmailDetailView.swift in Sources */,
+				D01AD501305F9D0600841D7A /* TextChunker.swift in Sources */,
 				D0F142292F38415900D51670 /* EmailListView.swift in Sources */,
 				D0F1422A2F38415900D51670 /* EmailAccountConnectionView.swift in Sources */,
 				D0954EF42F37A77900A58439 /* TextToSpeechService.swift in Sources */,
 				D0954EF52F37A77900A58439 /* SpeechRecognitionService.swift in Sources */,
 				D030D84C2F46C2AD00A9B610 /* DriveDocument.swift in Sources */,
-				D0954EF92F37B90500A58439 /* EmailProcessingService.swift in Sources */,
 				D0C870CF2F37F5BE0003AF7B /* EmailMessage.swift in Sources */,
 				D0C870D02F37F5BE0003AF7B /* EmailAccount.swift in Sources */,
 				D0954EFA2F37B90500A58439 /* EmailService.swift in Sources */,
 				D0954EFB2F37B90500A58439 /* KeychainService.swift in Sources */,
 				E01234562004 /* JournalEntry.swift in Sources */,
-				D0297E7E2FD63FAD0019EFF8 /* VectorStore.swift in Sources */,
-				D0297E7F2FD63FAD0019EFF8 /* IndexedChunk.swift in Sources */,
+				D01AD505305F9D7700841D7A /* ModelBrowserView.swift in Sources */,
 				E01234562005 /* ProfileItem.swift in Sources */,
 				E01234562006 /* ChatMessage.swift in Sources */,
 				E01234562007 /* JournalView.swift in Sources */,
 				E01234562008 /* JournalEntryView.swift in Sources */,
 				E01234562009 /* JournalEditorView.swift in Sources */,
 				E01234562010 /* ChatView.swift in Sources */,
+				D01AD507305F9FF200841D7A /* ModelCatalog.swift in Sources */,
 				E01234562011 /* ProfileView.swift in Sources */,
 				E01234562012 /* SkillsView.swift in Sources */,
 				E01234562013 /* EmbeddingService.swift in Sources */,
 				E01234562014 /* VectorDBService.swift in Sources */,
 				E01234562015 /* LLMService.swift in Sources */,
+				D01AD4F8305F84D100841D7A /* LLMProvider.swift in Sources */,
+				D01AD4F9305F84D100841D7A /* LocalVectorStore.swift in Sources */,
 				E01234562016 /* RAGService.swift in Sources */,
-				E01234562017 /* APIClient.swift in Sources */,
 				E01234562018 /* Configuration.swift in Sources */,
 				D030D84A2F46C29800A9B610 /* DriveView.swift in Sources */,
 			);
@@ -481,9 +479,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FBAZ6Z7WCS;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MindVault;
+				INFOPLIST_KEY_CFBundleDisplayName = Fibo;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MindVault needs access to your microphone for voice journal entries.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "MindVault needs access to speech recognition for voice journal entries.";
@@ -500,7 +498,7 @@
 				MARKETING_VERSION = 1.0;
 				NEW_SETTING = "";
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = com.mindvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fibo.personalai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -519,9 +517,9 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = FBAZ6Z7WCS;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MindVault;
+				INFOPLIST_KEY_CFBundleDisplayName = Fibo;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "MindVault needs access to your microphone for voice journal entries.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "MindVault needs access to speech recognition for voice journal entries.";
@@ -538,7 +536,7 @@
 				MARKETING_VERSION = 1.0;
 				NEW_SETTING = "";
 				OTHER_SWIFT_FLAGS = "";
-				PRODUCT_BUNDLE_IDENTIFIER = com.mindvault.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.fibo.personalai;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -575,6 +573,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		D01AD4FA305F927500841D7A /* XCRemoteSwiftPackageReference "swift-transformers" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-transformers";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.3.4;
+			};
+		};
+		D01AD4FD305F929400841D7A /* XCRemoteSwiftPackageReference "swift-huggingface" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/huggingface/swift-huggingface";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.11.0;
+			};
+		};
 		D0297E802FD6402F0019EFF8 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift-lm";
@@ -594,6 +608,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		D01AD4FB305F927500841D7A /* Tokenizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D01AD4FA305F927500841D7A /* XCRemoteSwiftPackageReference "swift-transformers" */;
+			productName = Tokenizers;
+		};
+		D01AD4FE305F929400841D7A /* HuggingFace */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D01AD4FD305F929400841D7A /* XCRemoteSwiftPackageReference "swift-huggingface" */;
+			productName = HuggingFace;
+		};
 		D0297E812FD642AE0019EFF8 /* MLXEmbedders */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = D0297E802FD6402F0019EFF8 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */;

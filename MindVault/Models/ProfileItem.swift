@@ -1,6 +1,6 @@
 //
 //  ProfileItem.swift
-//  MindVault
+//  Fibo
 //
 //  SwiftData model for profile items (skills, education, experience)
 //

@@ -1,6 +1,6 @@
 //
 //  EmailService.swift
-//  MindVault
+//  Fibo
 //
 //  Created with AI assistance
 //
@@ -30,7 +30,7 @@ class EmailService: NSObject, ObservableObject {
     
     // Gmail OAuth Configuration
     private let gmailClientId = "139218014357-3viojsk9bvbrqo96lbesscifdj0itdlf.apps.googleusercontent.com"
-    private let gmailRedirectURI = "com.mindvault.app:/oauth2redirect"
+    private let gmailRedirectURI = "com.fibo.app:/oauth2redirect"
     private let gmailAuthURL = "https://accounts.google.com/o/oauth2/v2/auth"
     private let gmailTokenURL = "https://oauth2.googleapis.com/token"
     private let gmailScope = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email openid"
@@ -213,7 +213,7 @@ class EmailService: NSObject, ObservableObject {
             
             let session = ASWebAuthenticationSession(
                 url: authURL,
-                callbackURLScheme: "com.mindvault.app"
+                callbackURLScheme: "com.fibo.app"
             ) { callbackURL, error in
                 if let error = error {
                     continuation.resume(throwing: error)

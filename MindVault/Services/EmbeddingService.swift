@@ -1,6 +1,6 @@
 //
 //  EmbeddingService.swift
-//  MindVault
+//  Fibo
 //
 //  On-device text embeddings via NLEmbedding — no backend, no download, no network.
 //
@@ -30,7 +30,12 @@ enum EmbeddingError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .modelUnavailable:
+            #if targetEnvironment(simulator)
+            return "NLEmbedding's sentence embedding model isn't available in the iOS Simulator "
+                + "(a known platform limitation, not a bug) — test on a physical device instead."
+            #else
             return "On-device sentence embedding model is not available on this device."
+            #endif
         case .failedToEmbed:
             return "Failed to generate embedding for the provided text."
         }

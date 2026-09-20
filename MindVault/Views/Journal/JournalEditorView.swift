@@ -1,6 +1,6 @@
 //
 //  JournalEditorView.swift
-//  MindVault
+//  Fibo
 //
 //  Editor view for creating/editing journal entries
 //

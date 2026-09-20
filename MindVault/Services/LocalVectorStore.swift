@@ -1,6 +1,6 @@
 //
 //  LocalVectorStore.swift
-//  MindVault
+//  Fibo
 //
 //  On-device vector store: JSON-persisted documents with vDSP cosine similarity search.
 //  Used when llmMode == .localLLM to avoid any backend calls.
@@ -56,7 +56,7 @@ final class LocalVectorStore: ObservableObject {
 
     private init() {
         storageURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("mindvault_vectors.json")
+            .appendingPathComponent("fibo_vectors.json")
         loadFromDisk()
     }
 

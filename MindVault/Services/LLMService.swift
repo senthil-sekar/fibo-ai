@@ -1,6 +1,6 @@
 //
 //  LLMService.swift
-//  MindVault
+//  Fibo
 //
 //  Resolves the LLM provider that matches the user's current AI Mode setting.
 //

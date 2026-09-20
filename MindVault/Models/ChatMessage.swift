@@ -1,6 +1,6 @@
 //
 //  ChatMessage.swift
-//  MindVault
+//  Fibo
 //
 //  SwiftData models for chat messages and conversations
 //

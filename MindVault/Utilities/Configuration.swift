@@ -1,6 +1,6 @@
 //
 //  Configuration.swift
-//  MindVault
+//  Fibo
 //
 //  App configuration and constants
 //
@@ -30,8 +30,8 @@ enum Configuration {
 
         /// Gmail uses the bundle-ID scheme, Drive the reversed-client-ID scheme.
         /// Both are registered in Info.plist.
-        static let appURLScheme = "com.mindvault.app"
-        static let appRedirectURI = "com.mindvault.app:/oauth2redirect"
+        static let appURLScheme = "com.fibo.app"
+        static let appRedirectURI = "com.fibo.app:/oauth2redirect"
         static var driveRedirectURI: String { "\(reversedClientID):/oauth2redirect" }
     }
 
@@ -59,6 +59,12 @@ enum Configuration {
     enum RAG {
         static let topK = 5
         static let minRelevanceScore: Float = 0.1
+        /// Target characters per chunk. ~1200 chars ≈ a few hundred tokens.
+        static let chunkSize = 1200
+        /// Overlap between consecutive chunks to preserve context across boundaries.
+        static let chunkOverlap = 150
+        /// Cap on chunks fed into the prompt (protects the context window).
+        static let maxContextChunks = 8
     }
 
     // MARK: - LLM Configuration
@@ -67,7 +73,7 @@ enum Configuration {
         static let temperature = 0.7
 
         static let systemPrompt = """
-        You are a personal AI assistant for MindVault, a personal journal app. You have access to the user's journal entries, skills, education, work experience, and personal information through the provided context.
+        You are a personal AI assistant for Fibo, a personal journal app. You have access to the user's journal entries, skills, education, work experience, and personal information through the provided context.
 
         Your role is to:
         1. Answer questions about the user's life, experiences, and capabilities

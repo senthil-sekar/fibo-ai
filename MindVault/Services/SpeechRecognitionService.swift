@@ -1,6 +1,6 @@
 //
 //  SpeechRecognitionService.swift
-//  MindVault
+//  Fibo
 //
 //  Speech-to-text service using AVFoundation
 //
@@ -63,7 +63,7 @@ class SpeechRecognitionService: ObservableObject {
         
         recognitionRequest.shouldReportPartialResults = true
 
-        // Voice audio never leaves the device, in either AI mode — MindVault's
+        // Voice audio never leaves the device, in either AI mode — Fibo's
         // privacy guarantee covers dictation unconditionally, not just On-Device
         // mode. (BYOK only ever sends the text query, never audio.) If the
         // device/locale can't do on-device recognition (older hardware,
@@ -134,7 +134,7 @@ class SpeechRecognitionService: ObservableObject {
             case .recognizerUnavailable:
                 return "Speech recognizer unavailable"
             case .onDeviceUnavailable:
-                return "This device or language can't transcribe on-device, and MindVault never sends your voice to Apple's servers. Type your entry instead."
+                return "This device or language can't transcribe on-device, and Fibo never sends your voice to Apple's servers. Type your entry instead."
             }
         }
     }

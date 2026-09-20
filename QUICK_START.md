@@ -6,8 +6,8 @@ Common commands and fixes. For the full picture see [README.md](README.md).
 
 ```bash
 git clone <repo-url>
-cd MindVault
-open MindVault.xcodeproj     # then ⌘R
+cd Fibo
+open Fibo.xcodeproj     # then ⌘R
 ```
 
 No backend, no Docker, no server — the app builds and runs standalone. It defaults to
@@ -40,6 +40,13 @@ API Key**. It's stored in the iOS Keychain.
 **BYOK: "Invalid OpenAI API key" / 401.** Double-check the key in Settings; regenerate it in the
 OpenAI dashboard if needed.
 
+**"On-device sentence embedding model is not available on this device."** You're running in
+the iOS Simulator. `NLEmbedding.sentenceEmbedding` — the retrieval embedding used in *both*
+AI modes — reliably returns `nil` there even though the same code works on real hardware.
+This blocks all indexing and search (and therefore Chat) in the Simulator, regardless of AI
+mode. Run on a physical device, or add the "Mac (Designed for iPad)" destination and run on
+an Apple Silicon Mac.
+
 ### On-Device mode
 
 **"On-device inference isn't linked yet."** Two packages are missing — both via Xcode's
@@ -67,7 +74,7 @@ catalog models (Gemma 3 4B, Mistral 7B) than the ~0.7–0.8 GB Fast-tier ones.
 Start with Llama 3.2 3B (~1.8 GB) — the best speed/quality balance on an iPhone 16 Plus.
 
 **Voice input fails with an on-device error.** The device or locale can't transcribe
-on-device, and MindVault never sends audio to Apple's servers, in either AI mode. Type
+on-device, and Fibo never sends audio to Apple's servers, in either AI mode. Type
 the entry instead.
 
 **Download fails partway.** Downloads resume — re-tap Download and already-finished files

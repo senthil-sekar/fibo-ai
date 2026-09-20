@@ -1,6 +1,6 @@
 //
 //  EmailDetailView.swift
-//  MindVault
+//  Fibo
 //
 //  Created with AI assistance
 //

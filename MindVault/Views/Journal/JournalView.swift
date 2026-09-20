@@ -1,6 +1,6 @@
 //
 //  JournalView.swift
-//  MindVault
+//  Fibo
 //
 //  Main journal list view
 //

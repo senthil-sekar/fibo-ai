@@ -1,8 +1,8 @@
 //
 //  LLMProvider.swift
-//  MindVault
+//  Fibo
 //
-//  LLM provider abstraction. MindVault has no self-hosted backend — every mode
+//  LLM provider abstraction. Fibo has no self-hosted backend — every mode
 //  runs entirely on-device except the generation call in BYOK mode, which goes
 //  straight from this device to the provider's API.
 //
@@ -52,6 +52,14 @@ protocol LLMProvider: Sendable {
         userMessage: String,
         history: [[String: String]]
     ) async throws -> String
+
+    /// Streaming variant. Providers that can't stream natively (e.g. a single
+    /// POST-and-wait HTTP call) wrap their one result as a one-element stream.
+    func streamComplete(
+        systemPrompt: String,
+        userMessage: String,
+        history: [[String: String]]
+    ) -> AsyncThrowingStream<String, Error>
 }
 
 // MARK: - OpenAI Direct Provider  (BYOK — generation only; retrieval is always on-device)
@@ -116,6 +124,25 @@ struct OpenAIDirectProvider: LLMProvider {
             throw LLMError.rateLimited
         default:
             throw LLMError.serverError(http.statusCode)
+        }
+    }
+
+    /// No SSE support here — wraps the single completion as a one-element stream
+    /// so callers have one uniform interface across providers.
+    func streamComplete(
+        systemPrompt: String, userMessage: String, history: [[String: String]]
+    ) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                do {
+                    let text = try await complete(
+                        systemPrompt: systemPrompt, userMessage: userMessage, history: history)
+                    continuation.yield(text)
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
         }
     }
 }
@@ -205,40 +232,59 @@ struct LocalLLMProvider: LLMProvider {
     let modelPath: String
 
     func complete(systemPrompt: String, userMessage: String, history: [[String: String]]) async throws -> String {
-        guard !modelPath.isEmpty else { throw LLMError.noModelSelected }
-
-        let dir = URL(fileURLWithPath: modelPath)
-        guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("config.json").path) else {
-            throw LLMError.modelFilesMissing
+        var result = ""
+        for try await chunk in streamComplete(
+            systemPrompt: systemPrompt, userMessage: userMessage, history: history
+        ) {
+            result += chunk
         }
-
-        #if canImport(MLXLMCommon)
-        let container = try await MLXModelCache.shared.container(forModelAt: modelPath)
-        let session = ChatSession(container, instructions: systemPrompt)
-
-        let prior: [Chat.Message] = history.compactMap { entry in
-            guard let role = entry["role"],
-                  let content = entry["content"], !content.isEmpty else { return nil }
-            switch role {
-            case "assistant": return .assistant(content)
-            case "system":    return .system(content)
-            default:          return .user(content)
-            }
-        }
-
-        let output: String
-        if prior.isEmpty {
-            output = try await session.respond(to: userMessage)
-        } else {
-            output = try await session.respond(to: prior + [.user(userMessage)])
-        }
-
-        let trimmed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = result.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw LLMError.emptyResponse }
         return trimmed
-        #else
-        throw LLMError.mlxPackageNotInstalled
-        #endif
+    }
+
+    func streamComplete(
+        systemPrompt: String, userMessage: String, history: [[String: String]]
+    ) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            Task {
+                guard !modelPath.isEmpty else {
+                    continuation.finish(throwing: LLMError.noModelSelected)
+                    return
+                }
+                let dir = URL(fileURLWithPath: modelPath)
+                guard FileManager.default.fileExists(atPath: dir.appendingPathComponent("config.json").path) else {
+                    continuation.finish(throwing: LLMError.modelFilesMissing)
+                    return
+                }
+
+                #if canImport(MLXLMCommon)
+                do {
+                    let container = try await MLXModelCache.shared.container(forModelAt: modelPath)
+
+                    let prior: [Chat.Message] = history.compactMap { entry in
+                        guard let role = entry["role"],
+                              let content = entry["content"], !content.isEmpty else { return nil }
+                        switch role {
+                        case "assistant": return .assistant(content)
+                        case "system":    return .system(content)
+                        default:          return .user(content)
+                        }
+                    }
+
+                    let session = ChatSession(container, instructions: systemPrompt, history: prior)
+                    for try await chunk in session.streamResponse(to: userMessage) {
+                        continuation.yield(chunk)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+                #else
+                continuation.finish(throwing: LLMError.mlxPackageNotInstalled)
+                #endif
+            }
+        }
     }
 }
 

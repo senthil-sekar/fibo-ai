@@ -13,7 +13,7 @@ If you just want to *use* an already-configured build, skip to [Using it](#using
 2. **APIs & Services → Library** → enable **Gmail API**.
 3. **OAuth consent screen** → External → add your Google account under **Test users**
    (an unverified app can only be used by listed test users).
-4. **Credentials → Create credentials → OAuth client ID → iOS**, bundle ID `com.mindvault.app`.
+4. **Credentials → Create credentials → OAuth client ID → iOS**, bundle ID `com.fibo.app`.
 5. Copy the client ID: `<NUMBER>-<HASH>.apps.googleusercontent.com`.
 
 Detailed walkthrough with the scope list: [EMAIL_CONFIGURATION_GUIDE.md](EMAIL_CONFIGURATION_GUIDE.md).
@@ -32,8 +32,8 @@ GOOGLE_OAUTH_CLIENT_ID_PREFIX = <NUMBER>-<HASH>
 
 That one value feeds the Info.plist `GoogleOAuthClientID` key (read by `Configuration.GoogleOAuth`)
 and the reversed-client-ID URL scheme Drive redirects to. `Config.local.xcconfig` is git-ignored, so
-the ID never gets committed. Gmail redirects to the bundle-ID scheme `com.mindvault.app` instead;
-both schemes are registered in `MindVault/Info.plist`.
+the ID never gets committed. Gmail redirects to the bundle-ID scheme `com.fibo.app` instead;
+both schemes are registered in `Fibo/Info.plist`.
 
 ## 3. Build and run
 
@@ -70,7 +70,7 @@ retrieved context (which may include email content) go to OpenAI to produce that
 | Symptom | Cause |
 |---------|-------|
 | Connect button disabled / "not configured" | `gmailClientId` is still empty or malformed |
-| Browser sheet shows `redirect_uri_mismatch` | The client ID isn't an **iOS** client, or the bundle ID doesn't match `com.mindvault.app` |
+| Browser sheet shows `redirect_uri_mismatch` | The client ID isn't an **iOS** client, or the bundle ID doesn't match `com.fibo.app` |
 | "Access blocked: app not verified" | Your account isn't in the consent screen's **Test users** |
 | Auth succeeds, no messages | Gmail API not enabled on the project |
 | Messages sync but Chat can't see them | Run **Settings → Sync All Now** to (re-)index |

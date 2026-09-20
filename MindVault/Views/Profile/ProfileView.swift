@@ -1,6 +1,6 @@
 //
 //  ProfileView.swift
-//  MindVault
+//  Fibo
 //
 //  Profile management view with education, experience, and skills
 //
@@ -363,12 +363,18 @@ struct SettingsView: View {
     @Query private var allProfileItems: [ProfileItem]
 
     @AppStorage("autoSync") private var autoSync = true
+    @AppStorage("llmMode") private var llmModeRaw = LLMProviderMode.localLLM.rawValue
 
-    @StateObject private var models = ModelManager.shared
-    @State private var selectedModel: LLMModelOption = OnDeviceConfig.selectedLLMModel
+    @StateObject private var rag = RAGService.shared
     @State private var showEmailConnection = false
     @State private var showEmailList = false
     @State private var showClearConfirm = false
+    @State private var openAIKeyInput = ""
+    @State private var openAIKeySaved = false
+
+    private var llmMode: LLMProviderMode {
+        LLMProviderMode(rawValue: llmModeRaw) ?? .localLLM
+    }
     
     var body: some View {
         NavigationStack {
@@ -402,26 +408,36 @@ struct SettingsView: View {
                 }
                 
                 Section {
-                    Picker("Chat model", selection: $selectedModel) {
-                        ForEach(LLMModelOption.allCases) { option in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(option.displayName)
-                                Text("\(option.subtitle) · \(option.approxDownloadSize)")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            .tag(option)
+                    Picker("AI Mode", selection: $llmModeRaw) {
+                        ForEach(LLMProviderMode.allCases, id: \.rawValue) { mode in
+                            Text(mode.displayName).tag(mode.rawValue)
                         }
                     }
-                    .onChange(of: selectedModel) { _, newValue in
-                        Task { await models.switchLLM(to: newValue) }
-                    }
 
-                    modelStatusRow
+                    if llmMode == .localLLM {
+                        NavigationLink("Browse Models") {
+                            ModelBrowserView()
+                        }
+                        modelStatusRow
+                    } else {
+                        SecureField("OpenAI API Key", text: $openAIKeyInput)
+                            .onSubmit(saveOpenAIKey)
+                        Button("Save Key", action: saveOpenAIKey)
+                            .disabled(openAIKeyInput.isEmpty)
+                        if openAIKeySaved {
+                            Label("Key saved", systemImage: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                                .font(.caption)
+                        }
+                    }
                 } header: {
-                    Text("On-Device AI Model")
+                    Text("AI Mode")
                 } footer: {
-                    Text("Runs entirely on your iPhone. Switching models downloads the new weights once, then works fully offline.")
+                    Text(llmMode.description)
+                }
+                .onAppear {
+                    openAIKeyInput = (try? KeychainService.shared.retrieveAPIKey(for: "openai")) ?? ""
+                    openAIKeySaved = !openAIKeyInput.isEmpty
                 }
 
                 Section("AI Index") {
@@ -435,7 +451,7 @@ struct SettingsView: View {
                             )
                         }
                     }
-                    .disabled(!models.isReady)
+                    .disabled(!rag.isReady)
 
                     Button("Clear AI Index", role: .destructive) {
                         showClearConfirm = true
@@ -460,8 +476,8 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     
-                    Link("Privacy Policy", destination: URL(string: "https://mindvault.app/privacy")!)
-                    Link("Terms of Service", destination: URL(string: "https://mindvault.app/terms")!)
+                    Link("Privacy Policy", destination: URL(string: "https://fibo.app/privacy")!)
+                    Link("Terms of Service", destination: URL(string: "https://fibo.app/terms")!)
                 }
             }
             .navigationTitle("Settings")
@@ -492,34 +508,21 @@ struct SettingsView: View {
 
     @ViewBuilder
     private var modelStatusRow: some View {
-        switch models.phase {
-        case .ready:
+        if rag.isReady {
             Label("Ready · running on device", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
                 .font(.caption)
-        case .downloading:
-            VStack(alignment: .leading, spacing: 4) {
-                Text(models.statusMessage.isEmpty ? "Downloading…" : models.statusMessage)
-                    .font(.caption)
-                ProgressView(value: models.downloadProgress)
-            }
-        case .loading:
-            Label("Loading into memory…", systemImage: "hourglass")
-                .font(.caption)
+        } else {
+            Label("No model selected yet — Browse Models above", systemImage: "circle")
                 .foregroundStyle(.secondary)
-        case .idle:
-            Label("Not loaded yet", systemImage: "circle")
                 .font(.caption)
-                .foregroundStyle(.secondary)
-        case .failed(let message):
-            VStack(alignment: .leading, spacing: 6) {
-                Label(message, systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-                    .font(.caption)
-                Button("Retry") { Task { await models.prepare() } }
-                    .font(.caption)
-            }
         }
+    }
+
+    private func saveOpenAIKey() {
+        guard !openAIKeyInput.isEmpty else { return }
+        try? KeychainService.shared.saveAPIKey(openAIKeyInput, for: "openai")
+        openAIKeySaved = true
     }
 
     private func clearIndex() {

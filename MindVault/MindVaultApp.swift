@@ -1,6 +1,6 @@
 //
-//  MindVaultApp.swift
-//  MindVault - Personal AI Journal Assistant
+//  FiboApp.swift
+//  Fibo - Personal AI Journal Assistant
 //
 //  Created with AI assistance
 //
@@ -9,7 +9,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct MindVaultApp: App {
+struct FiboApp: App {
     let modelContainer: ModelContainer
     @Environment(\.scenePhase) private var scenePhase
 
@@ -21,8 +21,7 @@ struct MindVaultApp: App {
                 ChatMessage.self,
                 Conversation.self,
                 EmailAccount.self,
-                EmailMessage.self,
-                IndexedChunk.self
+                EmailMessage.self
             ])
             
             let modelConfiguration = ModelConfiguration(

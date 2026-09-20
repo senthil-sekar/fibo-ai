@@ -1,6 +1,6 @@
 //
 //  DriveService.swift
-//  MindVault
+//  Fibo
 //
 //  Google Drive integration service for fetching and processing documents
 //
