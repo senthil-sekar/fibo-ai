@@ -9,7 +9,7 @@
 // with PKCE. See docs/EMAIL_CONFIGURATION_GUIDE.md for how to create one.
 
 // Everything before ".apps.googleusercontent.com", e.g. 123456789-abcdef.
-GOOGLE_OAUTH_CLIENT_ID_PREFIX =
+GOOGLE_OAUTH_CLIENT_ID_PREFIX = 
 GOOGLE_OAUTH_CLIENT_ID = $(GOOGLE_OAUTH_CLIENT_ID_PREFIX).apps.googleusercontent.com
 
 #include? "Config.local.xcconfig"

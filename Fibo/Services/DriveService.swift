@@ -26,9 +26,9 @@ class DriveService: NSObject, ObservableObject {
     private var accessToken: String?
     private var refreshToken: String?
     
-    // OAuth Configuration - You need to set these from Google Cloud Console
-    private let clientId = "139218014357-3viojsk9bvbrqo96lbesscifdjitdlf.apps.googleusercontent.com" // iOS Client ID
-    private let redirectUri = "com.googleusercontent.apps.139218014357-3viojsk9bvbrqo96lbesscifdjitdlf:/oauth2redirect"
+    // OAuth Configuration - sourced from Config.local.xcconfig via Configuration.GoogleOAuth
+    private let clientId = Configuration.GoogleOAuth.clientID
+    private let redirectUri = Configuration.GoogleOAuth.driveRedirectURI
     private let scope = "https://www.googleapis.com/auth/drive.readonly"
     
     private let tokenKey = "google_drive_token"

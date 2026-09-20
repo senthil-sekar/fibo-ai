@@ -2,19 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!--
-	  No NSAppTransportSecurity override: Fibo has no backend, so every
-	  network call is HTTPS to a public API (OpenAI, Hugging Face, Google OAuth/
-	  Gmail/Drive) and Apple's default ATS policy (HTTPS-only, TLS 1.2+) applies
-	  as-is. An earlier version allowed arbitrary plain HTTP for a self-hosted
-	  backend on the local network; that mode no longer exists.
-	-->
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Fibo needs access to your microphone to enable voice input for chat messages.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Fibo needs access to speech recognition to convert your voice into text for chat messages.</string>
-	<key>GoogleOAuthClientID</key>
-	<string>$(GOOGLE_OAUTH_CLIENT_ID)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -38,5 +25,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>GoogleOAuthClientID</key>
+	<string>$(GOOGLE_OAUTH_CLIENT_ID)</string>
 </dict>
 </plist>

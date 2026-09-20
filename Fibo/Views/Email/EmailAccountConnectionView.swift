@@ -135,13 +135,33 @@ struct EmailAccountConnectionView: View {
                 if emailService.isConnecting {
                     Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    
+
                     VStack(spacing: 16) {
                         ProgressView()
                             .scaleEffect(1.5)
-                        
+
                         Text("Connecting to \(selectedProvider.rawValue)...")
                             .font(.headline)
+                    }
+                    .padding(32)
+                    .background(Color(uiColor: .systemBackground))
+                    .cornerRadius(16)
+                    .shadow(radius: 20)
+                } else if emailService.isSyncing {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+
+                    VStack(spacing: 16) {
+                        ProgressView(value: emailService.syncProgress)
+                            .progressViewStyle(.linear)
+                            .frame(width: 200)
+
+                        Text("Syncing emails...")
+                            .font(.headline)
+
+                        Text("\(Int(emailService.syncProgress * 100))%")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
                     }
                     .padding(32)
                     .background(Color(uiColor: .systemBackground))
