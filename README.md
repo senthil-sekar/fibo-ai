@@ -1,6 +1,6 @@
 # Fibo 🧠
 
-A personal AI-powered iOS journal assistant that remembers everything about you. Write journal entries, record your skills, education, and experiences, and let your AI assistant answer questions about your life — entirely on your iPhone.
+A 100% local, AI-powered iOS journal assistant that remembers everything about you with complete privacy. Write journal entries, record your skills, education, and experiences, and let your AI assistant answer questions about your life — running entirely on-device with zero server calls and zero external storage, ensuring complete privacy for your personal data.
 
 ## Features
 

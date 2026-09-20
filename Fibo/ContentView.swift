@@ -70,7 +70,7 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     
     let pages: [(title: String, description: String, icon: String)] = [
-        ("Welcome to Fibo", "Your personal AI-powered journal that remembers everything about you.", "brain.head.profile"),
+        ("Welcome to Fibo", "Your 100% private, local AI journal assistant — running entirely on your phone with zero server calls or cloud storage.", "brain.head.profile"),
         ("Capture Your Life", "Write about your experiences, skills, education, and personal growth.", "pencil.and.outline"),
         ("Ask Anything", "Your AI assistant knows your entire history and can answer any question about you.", "sparkles")
     ]
